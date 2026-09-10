@@ -1,0 +1,18 @@
+# data and run artifacts
+data/
+runs/
+wandb/
+
+# secrets
+.env
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/

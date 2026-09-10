@@ -1,0 +1,22 @@
+[project]
+name = "simple-llm-train"
+version = "0.1.0"
+description = "Char-level transformer LM: dataclass config, W&B, checkpoints with resume"
+requires-python = ">=3.12"
+dependencies = [
+    "torch>=2.4",
+    "numpy",
+    "einops>=0.8",
+    "einx>=0.4",
+    "jaxtyping>=0.3",
+    "python-dotenv>=1.0",
+    "wandb>=0.29",        # log_mode="INCREMENTAL" for the sample table
+    "pyarrow>=17",        # hf_data.py: read the Hub's parquet export
+    "huggingface-hub>=0.25",
+]
+
+[tool.uv]
+package = false          # flat-layout scripts, not an installable package
+
+[tool.ruff]
+line-length = 120
