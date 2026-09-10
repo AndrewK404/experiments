@@ -61,6 +61,8 @@ uv run python train.py --data.raw_path data/raw/tinystories.txt \
 Note that windows are sampled from one flat token stream, so a batch can straddle two documents --
 there is no document-level attention masking.
 
+GPU pods: see [runpod_setup.md](runpod_setup.md).
+
 ## Training
 
 ```bash
