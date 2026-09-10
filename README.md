@@ -127,6 +127,10 @@ Provide the key via `.env` (`WANDB_API_KEY`), `wandb login`, or the environment.
 `train/loss`, `val/loss`, `lr`, `step_time`, a text sample at every eval (one incremental table),
 and the checkpoint as an artifact.
 
+Run names carry a to-the-second timestamp: `wandb.name = "gpu"` shows up as
+`gpu 2026-09-10 19:52:01`, and leaving it `null` names the run by timestamp alone -- reruns of the
+same profile stay distinguishable instead of collapsing into one name.
+
 `wandb.mode` accepts `online | offline | disabled`. Leaving it `null` defers to `WANDB_MODE` from
 the environment, which is why the config default is `None` -- an explicit value in code would
 override the environment. The `smoke` profile pins `disabled` so pipeline checks do not clutter

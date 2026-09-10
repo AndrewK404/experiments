@@ -79,6 +79,12 @@ def sample(model, tok, device: str, prompt: str = "ROMEO:", max_new_tokens: int 
     return prompt + tok.decode(out[0].tolist())
 
 
+def run_name(cfg: Config) -> str:
+    """Run name with a to-the-second timestamp, so repeated runs stay distinguishable in W&B."""
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    return f"{cfg.wandb.name} {ts}" if cfg.wandb.name else ts
+
+
 def train(cfg: Config) -> dict:
     device = pick_device(cfg.device)
     train_ds, val_ds, tok = data.load(cfg.data)
@@ -88,7 +94,7 @@ def train(cfg: Config) -> dict:
     ckpt_path = f"{cfg.out_dir}/ckpt.pt"
     run = wandb.init(
         project=cfg.wandb.project,
-        name=cfg.wandb.name,
+        name=run_name(cfg),
         mode=cfg.wandb.mode,
         config={**cfg.to_dict(), "runtime": {"device": device, "git_sha": git_sha(), "vocab_size": tok.vocab_size}},
     )
