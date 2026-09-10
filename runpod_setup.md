@@ -26,12 +26,14 @@ uv sync
 
 ```bash
 printf 'WANDB_API_KEY=<your key>\nWANDB_MODE=online\n' > .env   # load_dotenv() picks this up
-export HF_HOME=/workspace/.hf                                   # hf_data.py cache, survives restarts
+export HF_HOME=/workspace/.hf                                   # only needed if you log in to HF
+                                                                # or later pull whole repos/models
 ```
 
 ## Data
 
-`data/` is git-ignored, so prepare the corpus on the pod:
+`data/` is git-ignored, so prepare the corpus on the pod. `hf_data.py` streams parquet over range
+requests and keeps no on-disk cache, so it re-downloads its slice on every run:
 
 ```bash
 python data.py                                   # TinyShakespeare
