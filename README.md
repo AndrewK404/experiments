@@ -78,8 +78,8 @@ since softmax and cross-entropy here are hand-written rather than autocast-aware
 
 Each eval also generates a sample, one token at a time -- `train.sample_tokens` (default 300)
 bounds that cost, and `train.eval_every` controls how often you pay it. Sampling past
-`context_length` is supported: the tail of the generated text is re-fed as context, so the model
-keeps writing with a sliding window and simply forgets what fell out of it.
+`context_length` works: `generate()` slides its window, so the model keeps writing and simply
+forgets what fell out of that window.
 
 Any config field is a flag, so an experiment does not need a code change:
 

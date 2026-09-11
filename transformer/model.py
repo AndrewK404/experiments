@@ -283,7 +283,7 @@ class BasicsTransformerLM(nn.Module):
         """
         if x.dim() == 1:
             x = x.unsqueeze(0)
-        original_sequence_length = x.size(-1)
+        generated = []
         for _ in range(max_new_tokens):
             # Take the last `context_length` tokens if the input is
             # beyond the model's context length
@@ -309,9 +309,11 @@ class BasicsTransformerLM(nn.Module):
             # End generation if we see the EOS token ID
             if eos_token_id is not None and next_token_id.item() == eos_token_id:
                 break
+            generated.append(next_token_id)
             x = torch.cat((x, next_token_id), dim=-1)
-        new_token_ids = x[:, original_sequence_length:]
-        return new_token_ids
+        # Collected as we go: past context_length the window above slides, so slicing the final
+        # x by the prompt length would drop everything generated before the first slide.
+        return torch.cat(generated, dim=-1)
 
     @classmethod
     def from_pretrained(cls, pretrained_model_path: str):

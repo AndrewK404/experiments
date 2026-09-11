@@ -81,26 +81,13 @@ def save_ckpt(model, opt, step: int, cfg: Config, path: str) -> None:
 
 @torch.no_grad()
 def sample(model, tok, device: str, prompt: str = "ROMEO:", max_new_tokens: int = 300, cfg: Config | None = None) -> str:
-    """Sample, including past the context window, by re-feeding the tail of what was generated.
-
-    model.generate() truncates its own input to the last context_length tokens but then returns
-    x[:, len(prompt):] of that truncated window, so anything generated before the window slid is
-    lost. Asking it for at most half a window at a time keeps it in the regime where it is correct.
-
-    Tokens are produced one at a time, so this is the expensive half of an eval -- keep it short.
-    """
-    ctx = model.context_length
-    ids = tok.encode(prompt)
-    generated = 0
+    """Tokens are generated one at a time, so this is the expensive half of an eval -- keep it short."""
+    x = torch.tensor(tok.encode(prompt), device=device)
     model.eval()
     with amp_ctx(cfg, device) if cfg else torch.autocast("cpu", enabled=False):
-        while generated < max_new_tokens:
-            k = min(ctx // 2, max_new_tokens - generated)
-            x = torch.tensor(ids[-(ctx - k) :], device=device)
-            ids += model.generate(x, max_new_tokens=k, temperature=0.8)[0].tolist()
-            generated += k
+        out = model.generate(x, max_new_tokens=max_new_tokens, temperature=0.8)
     model.train()
-    return tok.decode(ids)
+    return prompt + tok.decode(out[0].tolist())
 
 
 def run_name(cfg: Config) -> str:
