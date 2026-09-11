@@ -58,10 +58,14 @@ class TrainCfg:
     ckpt_every: int = 500
     resume: str | None = None  # path to ckpt.pt
     prompt: str = "ROMEO:"  # sampling prompt; "STORY:" for the TinyStories corpus from hf_data.py
+    sample_tokens: int = 150  # tokens generated at each eval; they are produced one by one, so this costs time
+    amp: str = "bf16"  # bf16 | fp16 | off -- mixed precision, CUDA only (CPU/MPS always run fp32)
 
     def __post_init__(self):
         if self.warmup_steps >= self.max_steps:
             raise ValueError(f"warmup_steps={self.warmup_steps} >= max_steps={self.max_steps}")
+        if self.amp not in ("bf16", "fp16", "off"):
+            raise ValueError(f"amp={self.amp!r}, expected bf16 | fp16 | off")
 
 
 @dataclass
@@ -130,7 +134,33 @@ def smoke() -> Config:
     )
 
 
-PROFILES = {"default": default, "smoke": smoke}
+def gpu() -> Config:
+    """~25M params on TinyStories, sized for about an hour on an RTX 4090.
+
+    Run `python hf_data.py --limit 550000` first -- this profile expects that corpus.
+    Calibrate max_steps from the measured step_time: max_steps ~= 2700 / step_time.
+    """
+    return Config(
+        out_dir="runs/gpu",
+        data=DataCfg(raw_path="data/raw/tinystories.txt", out_dir="data/processed/tinystories"),
+        model=ModelCfg(context_length=256, d_model=512, num_layers=8, num_heads=8),
+        train=TrainCfg(
+            batch_size=64,
+            max_steps=20000,
+            warmup_steps=400,
+            weight_decay=0.1,
+            log_every=50,
+            eval_every=1000,
+            eval_steps=20,
+            ckpt_every=2000,
+            prompt="STORY:",
+            sample_tokens=150,
+        ),
+        wandb=WandbCfg(name="gpu"),
+    )
+
+
+PROFILES = {"default": default, "smoke": smoke, "gpu": gpu}
 
 
 # ---------------------------------------------------------------- CLI

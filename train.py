@@ -21,6 +21,13 @@ from transformer.nn_utils import clip_gradient, cross_entropy
 from transformer.optimizer import AdamW, get_cosine_lr
 
 
+def amp_ctx(cfg: Config, device: str):
+    """bf16/fp16 autocast on CUDA; a no-op elsewhere -- CPU and MPS stay in fp32."""
+    on = cfg.train.amp != "off" and device.startswith("cuda")
+    dtype = torch.bfloat16 if cfg.train.amp == "bf16" else torch.float16
+    return torch.autocast(device_type="cuda" if on else "cpu", dtype=dtype, enabled=on)
+
+
 def pick_device(device: str) -> str:
     if device != "auto":
         return device
@@ -46,21 +53,32 @@ def evaluate(model, ds, cfg: Config, device: str) -> float:
     losses = []
     for _ in range(cfg.train.eval_steps):
         x, y = get_batch(ds, cfg.train.batch_size, cfg.model.context_length, device)
-        losses.append(cross_entropy(model(x), y).item())
+        with amp_ctx(cfg, device):
+            logits = model(x)
+        losses.append(cross_entropy(logits.float(), y).item())
     model.train()
     return sum(losses) / len(losses)
 
 
-def train_step(model, opt, ds, cfg: Config, device: str, step: int) -> tuple[float, float]:
+def train_step(model, opt, ds, cfg: Config, device: str, step: int, scaler=None) -> tuple[float, float]:
     lr = get_cosine_lr(step, cfg.train.lr, cfg.train.min_lr, cfg.train.warmup_steps, cfg.train.max_steps)
     for g in opt.param_groups:
         g["lr"] = lr
     x, y = get_batch(ds, cfg.train.batch_size, cfg.model.context_length, device)
-    loss = cross_entropy(model(x), y)
+    with amp_ctx(cfg, device):
+        logits = model(x)
+    loss = cross_entropy(logits.float(), y)  # softmax/CE are hand-written, so keep them in fp32
     opt.zero_grad(set_to_none=True)
-    loss.backward()
-    clip_gradient(model.parameters(), cfg.train.grad_clip)
-    opt.step()
+    if scaler is None:
+        loss.backward()
+        clip_gradient(model.parameters(), cfg.train.grad_clip)
+        opt.step()
+    else:  # fp16 only: gradients need loss scaling to survive the narrow exponent range
+        scaler.scale(loss).backward()
+        scaler.unscale_(opt)
+        clip_gradient(model.parameters(), cfg.train.grad_clip)
+        scaler.step(opt)
+        scaler.update()
     return loss.item(), lr
 
 
@@ -70,11 +88,13 @@ def save_ckpt(model, opt, step: int, cfg: Config, path: str) -> None:
 
 
 @torch.no_grad()
-def sample(model, tok, device: str, prompt: str = "ROMEO:", max_new_tokens: int = 300) -> str:
+def sample(model, tok, device: str, prompt: str = "ROMEO:", max_new_tokens: int = 150, cfg: Config | None = None) -> str:
+    """Tokens are generated one at a time, so this is the expensive half of an eval -- keep it short."""
     x = torch.tensor(tok.encode(prompt), device=device)
     max_new_tokens = min(max_new_tokens, model.context_length - len(x))  # generate() keeps only the last window
     model.eval()
-    out = model.generate(x, max_new_tokens=max_new_tokens, temperature=0.8)
+    with amp_ctx(cfg, device) if cfg else torch.autocast("cpu", enabled=False):
+        out = model.generate(x, max_new_tokens=max_new_tokens, temperature=0.8)
     model.train()
     return prompt + tok.decode(out[0].tolist())
 
@@ -87,8 +107,10 @@ def run_name(cfg: Config) -> str:
 
 def train(cfg: Config) -> dict:
     device = pick_device(cfg.device)
+    torch.backends.cuda.matmul.allow_tf32 = True  # matters when amp is off; free on Ampere and newer
     train_ds, val_ds, tok = data.load(cfg.data)
     model, opt, step = build(cfg, tok.vocab_size, device)
+    scaler = torch.amp.GradScaler("cuda") if cfg.train.amp == "fp16" and device.startswith("cuda") else None
     os.makedirs(cfg.out_dir, exist_ok=True)
     cfg.save(f"{cfg.out_dir}/config.json")
     ckpt_path = f"{cfg.out_dir}/ckpt.pt"
@@ -98,13 +120,14 @@ def train(cfg: Config) -> dict:
         mode=cfg.wandb.mode,
         config={**cfg.to_dict(), "runtime": {"device": device, "git_sha": git_sha(), "vocab_size": tok.vocab_size}},
     )
-    print(f"device={device} params={model.get_num_params() / 1e6:.1f}M steps={step}->{cfg.train.max_steps}")
+    amp = cfg.train.amp if device.startswith("cuda") else "off"
+    print(f"device={device} amp={amp} params={model.get_num_params() / 1e6:.1f}M steps={step}->{cfg.train.max_steps}")
 
     # INCREMENTAL: one table for the whole run, each log ships only the new row.
     samples = wandb.Table(columns=["step", "val_loss", "text"], log_mode="INCREMENTAL")
     t0, val_loss, text = time.time(), float("nan"), ""
     while step < cfg.train.max_steps:
-        loss, lr = train_step(model, opt, train_ds, cfg, device, step)
+        loss, lr = train_step(model, opt, train_ds, cfg, device, step, scaler)
         step += 1
         if step % cfg.train.log_every == 0:
             run.log({"train/loss": loss, "lr": lr, "step_time": (time.time() - t0) / cfg.train.log_every}, step=step)
@@ -112,7 +135,7 @@ def train(cfg: Config) -> dict:
             t0 = time.time()
         if step % cfg.train.eval_every == 0 or step == cfg.train.max_steps:
             val_loss = evaluate(model, val_ds, cfg, device)
-            text = sample(model, tok, device, prompt=cfg.train.prompt)
+            text = sample(model, tok, device, cfg.train.prompt, cfg.train.sample_tokens, cfg)
             samples.add_data(step, val_loss, text)
             run.log({"val/loss": val_loss, "sample": samples}, step=step)
             print(f"step {step} val_loss {val_loss:.4f}\n{text}\n")

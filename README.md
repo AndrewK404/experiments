@@ -68,8 +68,16 @@ GPU pods: see [runpod_setup.md](runpod_setup.md).
 ```bash
 uv run python train.py --profile smoke        # 30 steps, ~10 s on CPU, W&B disabled
 uv run python train.py                        # default profile: ~3.5M params, 1000 steps
+uv run python train.py --profile gpu          # ~25M params on TinyStories, sized for a 4090
 uv run python train.py --help                 # every field, showing the current profile's values
 ```
+
+`train.amp` selects mixed precision on CUDA: `bf16` (default, no loss scaling needed), `fp16`
+(adds a `GradScaler`) or `off`. CPU and MPS always run fp32. The loss stays in fp32 either way,
+since softmax and cross-entropy here are hand-written rather than autocast-aware ATen ops.
+
+Each eval also generates a sample, one token at a time -- `train.sample_tokens` (default 150)
+bounds that cost, and `train.eval_every` controls how often you pay it.
 
 Any config field is a flag, so an experiment does not need a code change:
 
