@@ -113,8 +113,9 @@ def train(cfg: Config) -> dict:
     amp = cfg.train.amp if device.startswith("cuda") else "off"
     print(f"device={device} amp={amp} params={model.get_num_params() / 1e6:.1f}M steps={step}->{cfg.train.max_steps}")
 
-    # INCREMENTAL: one table for the whole run, each log ships only the new row.
-    samples = wandb.Table(columns=["step", "val_loss", "text"], log_mode="INCREMENTAL")
+    # MUTABLE: every log re-sends the whole table, so run.summary["sample"] holds all the rows.
+    # INCREMENTAL would upload only new rows, but then the summary points at a single increment.
+    samples = wandb.Table(columns=["step", "val_loss", "text"], log_mode="MUTABLE")
     t0, val_loss, text = time.time(), float("nan"), ""
     while step < cfg.train.max_steps:
         loss, lr = train_step(model, opt, train_ds, cfg, device, step)

@@ -132,7 +132,7 @@ Two things the config does beyond holding values:
 ## W&B
 
 Provide the key via `.env` (`WANDB_API_KEY`), `wandb login`, or the environment. Logged per run:
-`train/loss`, `val/loss`, `lr`, `step_time`, a text sample at every eval (one incremental table),
+`train/loss`, `val/loss`, `lr`, `step_time`, a text sample at every eval (one cumulative table),
 and the checkpoint as an artifact.
 
 Run names carry a to-the-second timestamp: `wandb.name = "gpu"` shows up as
