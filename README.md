@@ -72,8 +72,8 @@ uv run python train.py --profile gpu          # ~25M params on TinyStories, size
 uv run python train.py --help                 # every field, showing the current profile's values
 ```
 
-`train.amp` selects mixed precision on CUDA: `bf16` (default, no loss scaling needed), `fp16`
-(adds a `GradScaler`) or `off`. CPU and MPS always run fp32. The loss stays in fp32 either way,
+`train.amp` selects mixed precision on CUDA: `bf16` (default) or `off`. bf16 keeps fp32's exponent
+range, so no loss scaling is involved. CPU and MPS always run fp32. The loss stays in fp32 either way,
 since softmax and cross-entropy here are hand-written rather than autocast-aware ATen ops.
 
 Each eval also generates a sample, one token at a time -- `train.sample_tokens` (default 150)

@@ -59,13 +59,13 @@ class TrainCfg:
     resume: str | None = None  # path to ckpt.pt
     prompt: str = "ROMEO:"  # sampling prompt; "STORY:" for the TinyStories corpus from hf_data.py
     sample_tokens: int = 150  # tokens generated at each eval; they are produced one by one, so this costs time
-    amp: str = "bf16"  # bf16 | fp16 | off -- mixed precision, CUDA only (CPU/MPS always run fp32)
+    amp: str = "bf16"  # bf16 | off -- mixed precision, CUDA only (CPU/MPS always run fp32)
 
     def __post_init__(self):
         if self.warmup_steps >= self.max_steps:
             raise ValueError(f"warmup_steps={self.warmup_steps} >= max_steps={self.max_steps}")
-        if self.amp not in ("bf16", "fp16", "off"):
-            raise ValueError(f"amp={self.amp!r}, expected bf16 | fp16 | off")
+        if self.amp not in ("bf16", "off"):
+            raise ValueError(f"amp={self.amp!r}, expected bf16 | off")
 
 
 @dataclass

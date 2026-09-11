@@ -22,10 +22,9 @@ from transformer.optimizer import AdamW, get_cosine_lr
 
 
 def amp_ctx(cfg: Config, device: str):
-    """bf16/fp16 autocast on CUDA; a no-op elsewhere -- CPU and MPS stay in fp32."""
-    on = cfg.train.amp != "off" and device.startswith("cuda")
-    dtype = torch.bfloat16 if cfg.train.amp == "bf16" else torch.float16
-    return torch.autocast(device_type="cuda" if on else "cpu", dtype=dtype, enabled=on)
+    """bf16 autocast on CUDA; a no-op elsewhere -- CPU and MPS stay in fp32."""
+    on = cfg.train.amp == "bf16" and device.startswith("cuda")
+    return torch.autocast(device_type="cuda" if on else "cpu", dtype=torch.bfloat16, enabled=on)
 
 
 def pick_device(device: str) -> str:
@@ -60,7 +59,7 @@ def evaluate(model, ds, cfg: Config, device: str) -> float:
     return sum(losses) / len(losses)
 
 
-def train_step(model, opt, ds, cfg: Config, device: str, step: int, scaler=None) -> tuple[float, float]:
+def train_step(model, opt, ds, cfg: Config, device: str, step: int) -> tuple[float, float]:
     lr = get_cosine_lr(step, cfg.train.lr, cfg.train.min_lr, cfg.train.warmup_steps, cfg.train.max_steps)
     for g in opt.param_groups:
         g["lr"] = lr
@@ -69,16 +68,9 @@ def train_step(model, opt, ds, cfg: Config, device: str, step: int, scaler=None)
         logits = model(x)
     loss = cross_entropy(logits.float(), y)  # softmax/CE are hand-written, so keep them in fp32
     opt.zero_grad(set_to_none=True)
-    if scaler is None:
-        loss.backward()
-        clip_gradient(model.parameters(), cfg.train.grad_clip)
-        opt.step()
-    else:  # fp16 only: gradients need loss scaling to survive the narrow exponent range
-        scaler.scale(loss).backward()
-        scaler.unscale_(opt)
-        clip_gradient(model.parameters(), cfg.train.grad_clip)
-        scaler.step(opt)
-        scaler.update()
+    loss.backward()
+    clip_gradient(model.parameters(), cfg.train.grad_clip)
+    opt.step()
     return loss.item(), lr
 
 
@@ -110,7 +102,6 @@ def train(cfg: Config) -> dict:
     torch.backends.cuda.matmul.allow_tf32 = True  # matters when amp is off; free on Ampere and newer
     train_ds, val_ds, tok = data.load(cfg.data)
     model, opt, step = build(cfg, tok.vocab_size, device)
-    scaler = torch.amp.GradScaler("cuda") if cfg.train.amp == "fp16" and device.startswith("cuda") else None
     os.makedirs(cfg.out_dir, exist_ok=True)
     cfg.save(f"{cfg.out_dir}/config.json")
     ckpt_path = f"{cfg.out_dir}/ckpt.pt"
@@ -127,7 +118,7 @@ def train(cfg: Config) -> dict:
     samples = wandb.Table(columns=["step", "val_loss", "text"], log_mode="INCREMENTAL")
     t0, val_loss, text = time.time(), float("nan"), ""
     while step < cfg.train.max_steps:
-        loss, lr = train_step(model, opt, train_ds, cfg, device, step, scaler)
+        loss, lr = train_step(model, opt, train_ds, cfg, device, step)
         step += 1
         if step % cfg.train.log_every == 0:
             run.log({"train/loss": loss, "lr": lr, "step_time": (time.time() - t0) / cfg.train.log_every}, step=step)
