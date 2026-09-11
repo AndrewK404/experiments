@@ -5,9 +5,9 @@ dataclass-based config with named profiles, W&B logging, checkpoints with resume
 eval and text samples. No yaml, no orchestration layer.
 
 ```
-config.py         dataclasses + profiles (default, smoke) + CLI; the single source of truth
+config.py         dataclasses + profiles (default, smoke, gpu) + CLI; the single source of truth
+hf_data.py        export a Hugging Face dataset to a flat txt in data/raw/ (TinyStories by default)
 data.py           txt -> char tokens -> data/processed/{train,val}.npy + vocab.json
-hf_data.py        export a Hugging Face dataset to a flat txt in data/raw/
 train.py          training loop, W&B, ckpt/resume, eval, samples, metrics.json
 transformer/      model.py, optimizer.py, nn_utils.py, data.py
 runs/<name>/      ckpt.pt, config.json, metrics.json   (git-ignored)
@@ -17,46 +17,44 @@ data/             raw txt and .npy token arrays        (git-ignored)
 ## Setup
 
 ```bash
-uv sync                          # or: pip install -e . / pip install -r requirements
+uv sync
 cp .env.example .env             # then put your WANDB_API_KEY in it
+
+uv run python hf_data.py --limit 20000        # the default corpus
+uv run python train.py                        # train on it
 ```
 
 Without a key, run with `--wandb.mode disabled` (or `offline` to keep local logs only).
 
 ## Data
 
-`train.py` prepares the data on its own if `data/processed/train.npy` is missing, so this step is
-optional. Run it explicitly to inspect the corpus first:
+The default corpus is TinyStories, written by `hf_data.py`. It reads the Hub's parquet export over
+HTTP range requests, so only the rows you ask for are downloaded (TinyStories ships as 1.9 GB of
+text; `--limit 50000` pulls a few dozen MB):
 
 ```bash
-uv run python data.py                                    # TinyShakespeare, 1.1M chars, vocab 65
-uv run python data.py --data.url <raw url of any .txt>   # any plain-text corpus
-uv run python data.py --data.raw_path data/raw/my.txt     # a local file, no download
-```
-
-The tokenizer is built from the text itself, so the vocabulary is whatever characters the corpus
-contains. `--data.val_fraction 0.1` controls the tail held out for validation.
-
-### Hugging Face corpora
-
-`hf_data.py` reads the Hub's parquet export over HTTP range requests, so only the rows you ask
-for are downloaded (TinyStories ships as 1.9 GB of text; `--limit 50000` pulls a few dozen MB):
-
-```bash
-uv run python hf_data.py                                 # 50k TinyStories -> data/raw/tinystories.txt
-uv run python hf_data.py --limit 5000                    # smaller slice
+uv run python hf_data.py --limit 20000                   # -> data/raw/tinystories.txt, ~18M chars
+uv run python hf_data.py --limit 550000                  # ~500M chars, what the gpu profile wants
 
 uv run python hf_data.py --dataset cardiffnlp/tweet_eval --config offensive \
     --label 1 --separator $'\n' --out data/raw/tweets.txt
 ```
 
-`--separator` is prepended to every item, so each document starts the same way and the marker can
-double as a sampling prompt:
+`--separator` (default `\n\n\nSTORY: `) is prepended to every item, so each document starts the
+same way and the marker doubles as a sampling prompt -- hence `train.prompt = "STORY:"`.
+
+Tokenization into `data/processed/` happens automatically on the first training run. Do it
+explicitly to inspect the corpus first, or to use a different one:
 
 ```bash
-uv run python train.py --data.raw_path data/raw/tinystories.txt \
-    --data.out_dir data/processed/tinystories --train.prompt "STORY:"
+uv run python data.py                                          # tokenize data/raw/tinystories.txt
+uv run python data.py --profile smoke                          # downloads TinyShakespeare instead
+uv run python data.py --data.url <raw url> --data.raw_path data/raw/mine.txt
 ```
+
+The tokenizer is built from the text itself, so the vocabulary is whatever characters the corpus
+contains -- `hf_data.py --ascii-only` keeps it small. `--data.val_fraction 0.1` controls the tail
+held out for validation.
 
 Note that windows are sampled from one flat token stream, so a batch can straddle two documents --
 there is no document-level attention masking.
@@ -66,7 +64,7 @@ GPU pods: see [runpod_setup.md](runpod_setup.md).
 ## Training
 
 ```bash
-uv run python train.py --profile smoke        # 30 steps, ~10 s on CPU, W&B disabled
+uv run python train.py --profile smoke        # 30 steps on TinyShakespeare, ~10 s, W&B disabled
 uv run python train.py                        # default profile: ~3.5M params, 1000 steps
 uv run python train.py --profile gpu          # ~25M params on TinyStories, sized for a 4090
 uv run python train.py --help                 # every field, showing the current profile's values

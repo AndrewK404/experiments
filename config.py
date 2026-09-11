@@ -18,11 +18,15 @@ from dataclasses import asdict, dataclass, field
 DERIVED = ("model.d_ff",)
 
 
+# A small plain-text corpus to point --data.url at when you want a one-file download instead of hf_data.py.
+TINY_SHAKESPEARE = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+
+
 @dataclass
 class DataCfg:
-    url: str = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
-    raw_path: str = "data/raw/input.txt"
-    out_dir: str = "data/processed"
+    raw_path: str = "data/raw/tinystories.txt"  # produced by hf_data.py
+    out_dir: str = "data/processed/tinystories"
+    url: str | None = None  # if set, raw_path is downloaded from here when missing
     val_fraction: float = 0.1
 
 
@@ -111,8 +115,8 @@ class Config:
 
 
 def default() -> Config:
-    """Baseline run: ~3.5M parameters, 1000 steps, TinyShakespeare."""
-    return Config()
+    """Baseline run: ~3.5M parameters, 1000 steps. Needs `python hf_data.py --limit 20000` first."""
+    return Config(train=TrainCfg(prompt="STORY:"))
 
 
 def smoke() -> Config:
@@ -120,6 +124,7 @@ def smoke() -> Config:
     return Config(
         seed=0,
         out_dir="runs/smoke",
+        data=DataCfg(raw_path="data/raw/tinyshakespeare.txt", out_dir="data/processed/smoke", url=TINY_SHAKESPEARE),
         model=ModelCfg(context_length=64, d_model=64, num_layers=2, num_heads=2),
         train=TrainCfg(
             batch_size=8,
@@ -129,6 +134,7 @@ def smoke() -> Config:
             eval_every=15,
             eval_steps=2,
             ckpt_every=30,
+            sample_tokens=100,
         ),
         wandb=WandbCfg(name="smoke", mode="disabled"),
     )
@@ -142,7 +148,6 @@ def gpu() -> Config:
     """
     return Config(
         out_dir="runs/gpu",
-        data=DataCfg(raw_path="data/raw/tinystories.txt", out_dir="data/processed/tinystories"),
         model=ModelCfg(context_length=256, d_model=512, num_layers=8, num_heads=8),
         train=TrainCfg(
             batch_size=64,

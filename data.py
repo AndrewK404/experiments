@@ -1,8 +1,9 @@
-"""Data: download txt -> char-level tokens -> data/processed/{train,val}.npy + vocab.json
+"""Data: txt -> char-level tokens -> data/processed/{train,val}.npy + vocab.json
 
-    python data.py                    # default profile
-    python data.py --data.url <raw url of any .txt>
-    python data.py --data.raw_path data/raw/tinystories.txt   # local file (see hf_data.py)
+    python hf_data.py                 # first: write data/raw/tinystories.txt
+    python data.py                    # then tokenize it (train.py does this on its own too)
+    python data.py --profile smoke    # downloads TinyShakespeare instead, no HF needed
+    python data.py --data.url <raw url of any .txt> --data.raw_path data/raw/mine.txt
 """
 import json
 import os
@@ -44,6 +45,12 @@ class CharTokenizer:
 
 def prepare(cfg: DataCfg) -> None:
     if not os.path.exists(cfg.raw_path):
+        if cfg.url is None:
+            raise SystemExit(
+                f"{cfg.raw_path} is missing and data.url is not set.\n"
+                f"Write the corpus first (e.g. `python hf_data.py --limit 20000 --out {cfg.raw_path}`), "
+                f"or point --data.url at a plain-text file to download."
+            )
         os.makedirs(os.path.dirname(cfg.raw_path), exist_ok=True)
         urllib.request.urlretrieve(cfg.url, cfg.raw_path)
     with open(cfg.raw_path) as f:
