@@ -58,7 +58,7 @@ class TrainCfg:
     ckpt_every: int = 500
     resume: str | None = None  # path to ckpt.pt
     prompt: str = "ROMEO:"  # sampling prompt; "STORY:" for the TinyStories corpus from hf_data.py
-    sample_tokens: int = 150  # tokens generated at each eval; they are produced one by one, so this costs time
+    sample_tokens: int = 300  # tokens generated at each eval; they are produced one by one, so this costs time
     amp: str = "bf16"  # bf16 | off -- mixed precision, CUDA only (CPU/MPS always run fp32)
 
     def __post_init__(self):
@@ -154,7 +154,7 @@ def gpu() -> Config:
             eval_steps=20,
             ckpt_every=2000,
             prompt="STORY:",
-            sample_tokens=150,
+            sample_tokens=300,
         ),
         wandb=WandbCfg(name="gpu"),
     )

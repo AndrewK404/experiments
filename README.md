@@ -76,8 +76,10 @@ uv run python train.py --help                 # every field, showing the current
 range, so no loss scaling is involved. CPU and MPS always run fp32. The loss stays in fp32 either way,
 since softmax and cross-entropy here are hand-written rather than autocast-aware ATen ops.
 
-Each eval also generates a sample, one token at a time -- `train.sample_tokens` (default 150)
-bounds that cost, and `train.eval_every` controls how often you pay it.
+Each eval also generates a sample, one token at a time -- `train.sample_tokens` (default 300)
+bounds that cost, and `train.eval_every` controls how often you pay it. Sampling past
+`context_length` is supported: the tail of the generated text is re-fed as context, so the model
+keeps writing with a sliding window and simply forgets what fell out of it.
 
 Any config field is a flag, so an experiment does not need a code change:
 
