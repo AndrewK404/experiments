@@ -7,7 +7,7 @@ Use a **PyTorch 2.x** pod template: CUDA and torch are already installed. Work i
 
 ```bash
 cd /workspace
-git clone https://github.com/<you>/simple-llm-train.git && cd simple-llm-train
+git clone https://github.com/andrewk404/simple-llm-train.git && cd simple-llm-train
 
 # reuse the preinstalled torch (skips a ~2.5 GB CUDA wheel download)
 pip install "einops>=0.8" "einx>=0.4" "jaxtyping>=0.3" python-dotenv "wandb>=0.29" pyarrow huggingface-hub
@@ -36,8 +36,8 @@ export HF_HOME=/workspace/.hf                                   # only needed if
 requests and keeps no on-disk cache, so it re-downloads its slice on every run:
 
 ```bash
-python data.py                                   # TinyShakespeare
-python hf_data.py --limit 50000                  # or 50k TinyStories
+python hf_data.py --limit 550000                 # TinyStories, ~500M chars, what --profile gpu wants
+python hf_data.py --limit 20000                  # a smaller slice to try things out
 ```
 
 ## Train
@@ -46,16 +46,15 @@ python hf_data.py --limit 50000                  # or 50k TinyStories
 
 ```bash
 python train.py --profile smoke                  # ~10 s, verifies the whole pipeline
-python train.py --profile default                # baseline, sized for CPU/MPS
+python train.py --profile gpu                    # ~25M params, bf16, sized for an RTX 4090
 ```
 
-The default profile (3.5M params) underuses a datacenter GPU. Scale it up:
+Calibrate `max_steps` before the real run: train 100 steps, read `step_time` from the log, then
+set `max_steps ~= (seconds you want to spend - 300) / step_time`.
 
 ```bash
-python train.py \
-  --model.d_model 512 --model.num_layers 8 --model.num_heads 8 --model.context_length 512 \
-  --train.batch_size 64 --train.max_steps 20000 --train.warmup_steps 500 \
-  --out_dir runs/gpu --wandb.name gpu
+python train.py --profile gpu --train.max_steps 100 --train.warmup_steps 10 \
+  --wandb.mode disabled --out_dir runs/calib
 ```
 
 Once a configuration repeats, add it as a profile in `PROFILES` instead of keeping a wall of flags
