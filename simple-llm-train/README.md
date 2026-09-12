@@ -5,7 +5,7 @@ dataclass-based config with named profiles, W&B logging, checkpoints with resume
 eval and text samples. No yaml, no orchestration layer.
 
 ```
-config.py         dataclasses + profiles (default, smoke, gpu) + CLI; the single source of truth
+config.py         dataclasses + profiles (default, smoke, gpu, code) + CLI; the single source of truth
 hf_data.py        export a Hugging Face dataset to a flat txt in data/raw/ (TinyStories by default)
 data.py           txt -> char tokens -> data/processed/{train,val}.npy + vocab.json
 train.py          training loop, W&B, ckpt/resume, eval, samples, metrics.json
@@ -37,11 +37,22 @@ uv run python hf_data.py --limit 20000                   # -> data/raw/tinystori
 uv run python hf_data.py --limit 550000                  # ~500M chars, what the gpu profile wants
 
 uv run python hf_data.py --dataset cardiffnlp/tweet_eval --config offensive \
-    --label 1 --separator $'\n' --out data/raw/tweets.txt
+    --label 1 --separator "\n" --out data/raw/tweets.txt
 ```
 
 `--separator` (default `\n\n\nSTORY: `) is prepended to every item, so each document starts the
-same way and the marker doubles as a sampling prompt -- hence `train.prompt = "STORY:"`.
+same way and the marker doubles as a sampling prompt -- hence `train.prompt = "STORY:"`. Escape
+sequences in it are interpreted, so `--separator "\n\n\n# ---\n"` works without `$'...'` quoting.
+
+Any Hub dataset with a text column works. Python source, for the `code` profile:
+
+```bash
+uv run python hf_data.py --dataset Ananda100/python-clean-codeparrot --text-col content \
+    --limit 100000 --ascii-only --separator "\n\n\n# ---\n" --out data/raw/python-code.txt
+```
+
+`--ascii-only` matters for a char-level model on code: unicode in comments would otherwise push the
+vocab from ~99 characters into the hundreds for almost no benefit.
 
 Tokenization into `data/processed/` happens automatically on the first training run. Do it
 explicitly to inspect the corpus first, or to use a different one:
@@ -59,7 +70,7 @@ held out for validation.
 Note that windows are sampled from one flat token stream, so a batch can straddle two documents --
 there is no document-level attention masking.
 
-GPU pods: see [runpod_setup.md](runpod_setup.md).
+GPU pods: see [Running on a GPU pod](#running-on-a-gpu-pod) below.
 
 ## Training
 
@@ -67,6 +78,7 @@ GPU pods: see [runpod_setup.md](runpod_setup.md).
 uv run python train.py --profile smoke        # 30 steps on TinyShakespeare, ~10 s, W&B disabled
 uv run python train.py                        # default profile: ~3.5M params, 1000 steps
 uv run python train.py --profile gpu          # ~25M params on TinyStories, sized for a 4090
+uv run python train.py --profile code         # ~25M params on Python source, ~50 min on a 4090
 uv run python train.py --help                 # every field, showing the current profile's values
 ```
 
@@ -77,7 +89,21 @@ since softmax and cross-entropy here are hand-written rather than autocast-aware
 Each eval also generates a sample, one token at a time -- `train.sample_tokens` (default 300)
 bounds that cost, and `train.eval_every` controls how often you pay it. Sampling past
 `context_length` works: `generate()` slides its window, so the model keeps writing and simply
-forgets what fell out of that window.
+forgets what fell out of that window. The `code` profile leans on that deliberately: 1000 sampled
+tokens against a 256 context, so the tail of every sample is written with the prompt already gone.
+
+Keep the prompt itself shorter than `context_length` -- `generate()` feeds only the last
+`context_length` characters, so anything before that is dropped before the first token is produced.
+
+Every run evaluates at step 0 as well, before any training: the sample shows what the prompt looks
+like untrained, and the val loss should land in the neighbourhood of `ln(vocab_size)` -- a cheap
+check that the data pipeline is sane.
+
+Early training is where samples change fastest, so a flat `eval_every` either wastes time later or
+steps right over the interesting part. `train.eval_dense_until` and `train.eval_dense_every` add a
+denser first phase; `eval_dense_until = 0` (the default) disables it. The `code` profile uses
+`eval_dense_until = 1000, eval_dense_every = 200, eval_every = 1000`, which evaluates at steps
+0, 200, 400, 600, 800, 1000, and every 1000 after that.
 
 Any config field is a flag, so an experiment does not need a code change:
 
@@ -115,7 +141,7 @@ def smoke() -> Config:
         wandb=WandbCfg(name="smoke", mode="disabled"),
     )
 
-PROFILES = {"default": default, "smoke": smoke}
+PROFILES = {"default": default, "smoke": smoke, "gpu": gpu, "code": code}
 ```
 
 A new experiment means a new function plus one line in `PROFILES`, never an edit to the defaults --
@@ -143,6 +169,72 @@ same profile stay distinguishable instead of collapsing into one name.
 the environment, which is why the config default is `None` -- an explicit value in code would
 override the environment. The `smoke` profile pins `disabled` so pipeline checks do not clutter
 the project. An `offline` run can be uploaded later with `wandb sync wandb/offline-run-*`.
+
+## Running on a GPU pod
+
+Notes for RunPod; most of it applies to any rented box.
+
+**Pick a template whose CUDA matches the host.** `runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404`
+is a good default for a 4090: CUDA 12.8, torch 2.8, Ubuntu 24.04 (Python 3.12). Then pin the same
+CUDA version in the deploy filters -- the fleet runs mixed driver versions and you are scheduled
+onto whatever machine is free.
+
+**Attach a network volume** and work inside `/workspace`. Without one the container disk is
+ephemeral: stopping the pod wipes the repo, the venv and every cache, and the next pod re-downloads
+everything. A path under `/workspace` is persistent only if a volume is actually mounted there.
+
+The driver lives on the host and is passed into the container; the template only chooses the CUDA
+runtime. Those are two different numbers, and the driver's must be the higher one:
+
+```bash
+nvidia-smi     # the host driver's ceiling
+python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
+```
+
+### Install
+
+The image already ships torch built against its CUDA, so install only what is missing -- with `uv`
+for speed, but **not** `uv sync`, which would build an isolated venv from `uv.lock` and pull a
+~2.5 GB torch wheel from PyPI, ignoring the one already there:
+
+```bash
+cd /workspace
+git clone https://github.com/AndrewK404/experiments.git && cd experiments/simple-llm-train
+
+curl -LsSf https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env
+uv pip install --system "einops>=0.8" "einx>=0.4" "jaxtyping>=0.3" python-dotenv \
+    "wandb>=0.29" pyarrow huggingface-hub
+
+printf 'WANDB_API_KEY=<your key>\nWANDB_MODE=online\n' > .env
+```
+
+`--system` installs into the image's Python, next to its torch. To keep a venv anyway, create it
+with `uv venv --system-site-packages` so the image's torch stays visible, and run through
+`uv run --no-sync` so uv does not resync the project and reinstall torch behind your back.
+
+### Run
+
+`data/` is git-ignored, so build the corpus on the pod. `pick_device` finds CUDA on its own.
+
+```bash
+python hf_data.py --dataset Ananda100/python-clean-codeparrot --text-col content \
+    --limit 100000 --ascii-only --separator "\n\n\n# ---\n" --out data/raw/python-code.txt
+
+python -u train.py --profile code --train.max_steps 200 --train.warmup_steps 20 \
+    --wandb.mode disabled --out_dir runs/calib          # read step_time from the log
+```
+
+Then set `max_steps ~= (seconds you want to spend - 300) / step_time` for the real run. An SSH drop
+kills the process, so detach it:
+
+```bash
+tmux new -s train                                        # detach with Ctrl+B, then D
+python -u train.py --profile code --train.max_steps <n> 2>&1 | tee runs/code/train.log
+```
+
+`python -u` matters here: through a pipe stdout is block-buffered, so without it the log stays
+empty for minutes. Reattach with `tmux attach -t train`, and resume an interrupted run with
+`--train.resume runs/code/ckpt.pt --train.max_steps <higher>`.
 
 ## Notes
 
