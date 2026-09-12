@@ -58,6 +58,8 @@ class TrainCfg:
     grad_clip: float = 1.0
     log_every: int = 10
     eval_every: int = 100
+    eval_dense_until: int = 0  # below this step eval runs every eval_dense_every instead; 0 disables
+    eval_dense_every: int = 200
     eval_steps: int = 20
     ckpt_every: int = 500
     resume: str | None = None  # path to ckpt.pt
@@ -70,6 +72,8 @@ class TrainCfg:
             raise ValueError(f"warmup_steps={self.warmup_steps} >= max_steps={self.max_steps}")
         if self.amp not in ("bf16", "off"):
             raise ValueError(f"amp={self.amp!r}, expected bf16 | off")
+        if self.eval_dense_until and self.eval_dense_every <= 0:
+            raise ValueError(f"eval_dense_every={self.eval_dense_every}, expected > 0 when eval_dense_until is set")
 
 
 @dataclass
@@ -165,7 +169,55 @@ def gpu() -> Config:
     )
 
 
-PROFILES = {"default": default, "smoke": smoke, "gpu": gpu}
+def code() -> Config:
+    r"""~25M params on Python source, sized for about 50 minutes on an RTX 4090.
+
+    Run this first (--ascii-only matters: unicode in comments would bloat a char-level vocab):
+        python hf_data.py --dataset Ananda100/python-clean-codeparrot --text-col content \
+            --limit 100000 --ascii-only --separator "\n\n\n# ---\n" --out data/raw/python-code.txt
+
+    100k files is ~520M characters: one 20k-step run reads 64*256*20000 = 328M, so that is a bit
+    over one epoch, with room for a longer calibrated run. Going much higher mostly costs RAM --
+    data.py holds the whole corpus as a Python list while tokenizing (~16 GB at 200k files).
+
+    Calibrate max_steps from the measured step_time: max_steps ~= 3000 / step_time.
+
+    The prompt opens both loops of a training loop, so the very next thing the sample owes us is the
+    body at twelve spaces: zero_grad / forward / loss / backward / step. That is a checklist you can
+    grade against, unlike "STORY:", which looked plausible almost immediately and then said nothing
+    about progress.
+
+    sample_tokens is 1000 against a context_length of 256 on purpose. The prompt scrolls out of the
+    window after the first ~256 generated characters, so the tail measures something else entirely:
+    whether the model keeps writing coherent Python with no prompt left to lean on.
+    """
+    return Config(
+        out_dir="runs/code",
+        data=DataCfg(raw_path="data/raw/python-code.txt", out_dir="data/processed/python-code"),
+        model=ModelCfg(context_length=256, d_model=512, num_layers=8, num_heads=8),
+        train=TrainCfg(
+            batch_size=64,
+            max_steps=20000,
+            warmup_steps=400,
+            weight_decay=0.1,
+            log_every=50,
+            eval_every=1000,
+            eval_dense_until=1000,  # 0, 200, 400, 600, 800, then every 1000
+            eval_dense_every=200,
+            eval_steps=20,
+            ckpt_every=2000,
+            prompt=(
+                "def train(model, loader, optimizer):\n"
+                "    for epoch in range(10):\n"
+                "        for x, y in loader:\n"
+            ),
+            sample_tokens=1000,  # 4x the context window: the tail is written with the prompt long gone
+        ),
+        wandb=WandbCfg(name="code"),
+    )
+
+
+PROFILES = {"default": default, "smoke": smoke, "gpu": gpu, "code": code}
 
 
 # ---------------------------------------------------------------- CLI

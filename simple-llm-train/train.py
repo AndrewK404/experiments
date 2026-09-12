@@ -74,6 +74,15 @@ def train_step(model, opt, ds, cfg: Config, device: str, step: int) -> tuple[flo
     return loss.item(), lr
 
 
+def should_eval(step: int, cfg: Config) -> bool:
+    """Dense evals over the first eval_dense_until steps -- that is where the samples change from
+    noise to syntax, and a coarse eval_every would step straight over it."""
+    if step == cfg.train.max_steps:
+        return True
+    every = cfg.train.eval_dense_every if step < cfg.train.eval_dense_until else cfg.train.eval_every
+    return step % every == 0
+
+
 def save_ckpt(model, opt, step: int, cfg: Config, path: str) -> None:
     """Weights + optimizer + step + config: the whole run is recoverable from ckpt.pt."""
     torch.save({"model": model.state_dict(), "optimizer": opt.state_dict(), "step": step, "config": cfg.to_dict()}, path)
@@ -116,7 +125,20 @@ def train(cfg: Config) -> dict:
     # MUTABLE: every log re-sends the whole table, so run.summary["sample"] holds all the rows.
     # INCREMENTAL would upload only new rows, but then the summary points at a single increment.
     samples = wandb.Table(columns=["step", "val_loss", "text"], log_mode="MUTABLE")
-    t0, val_loss, text = time.time(), float("nan"), ""
+
+    def log_eval(step: int) -> float:
+        """Val loss + a sample at this step, to W&B and to stdout."""
+        val_loss = evaluate(model, val_ds, cfg, device)
+        text = sample(model, tok, device, cfg.train.prompt, cfg.train.sample_tokens, cfg)
+        samples.add_data(step, val_loss, text)
+        run.log({"val/loss": val_loss, "sample": samples}, step=step)
+        print(f"step {step} val_loss {val_loss:.4f}\n{text}\n")
+        return val_loss
+
+    # Step 0 is the untrained baseline: val_loss should land near ln(vocab_size), and the sample
+    # shows what "no training at all" looks like for this prompt.
+    val_loss = log_eval(step) if step == 0 else float("nan")
+    t0 = time.time()
     while step < cfg.train.max_steps:
         loss, lr = train_step(model, opt, train_ds, cfg, device, step)
         step += 1
@@ -124,12 +146,8 @@ def train(cfg: Config) -> dict:
             run.log({"train/loss": loss, "lr": lr, "step_time": (time.time() - t0) / cfg.train.log_every}, step=step)
             print(f"step {step} loss {loss:.4f} lr {lr:.2e} ({time.time() - t0:.1f}s)")
             t0 = time.time()
-        if step % cfg.train.eval_every == 0 or step == cfg.train.max_steps:
-            val_loss = evaluate(model, val_ds, cfg, device)
-            text = sample(model, tok, device, cfg.train.prompt, cfg.train.sample_tokens, cfg)
-            samples.add_data(step, val_loss, text)
-            run.log({"val/loss": val_loss, "sample": samples}, step=step)
-            print(f"step {step} val_loss {val_loss:.4f}\n{text}\n")
+        if should_eval(step, cfg):
+            val_loss = log_eval(step)
             t0 = time.time()  # eval and generation must not leak into the next step_time
         if step % cfg.train.ckpt_every == 0 or step == cfg.train.max_steps:
             save_ckpt(model, opt, step, cfg, ckpt_path)

@@ -4,6 +4,8 @@
     python hf_data.py --limit 5000
     python hf_data.py --dataset cardiffnlp/tweet_eval --config offensive --split train \
         --label 1 --separator "\n" --out data/raw/tweets.txt
+    python hf_data.py --dataset Ananda100/python-clean-codeparrot --text-col content \
+        --limit 100000 --ascii-only --separator "\n\n\n# ---\n" --out data/raw/python-code.txt
 
 Then train on it:
     python train.py --data.raw_path data/raw/tinystories.txt \
@@ -67,7 +69,10 @@ if __name__ == "__main__":
     p.add_argument("--label-col", default="label")
     p.add_argument("--label", type=int, default=None, help="keep only rows with this integer label")
     p.add_argument("--min-chars", type=int, default=1)
-    p.add_argument("--separator", default="\n\n\nSTORY: ", help="prepended to every item")
+    # argparse does no escape processing, and "\n" in a shell argument is a literal backslash-n --
+    # so decode escapes here instead of making every caller reach for $'...' quoting.
+    p.add_argument("--separator", default="\n\n\nSTORY: ", type=lambda s: s.encode().decode("unicode_escape"),
+                   help=r"prepended to every item; \n and \t are interpreted")
     p.add_argument("--ascii-only", action="store_true")
     p.add_argument("--out", default="data/raw/tinystories.txt")
     main(p.parse_args())
