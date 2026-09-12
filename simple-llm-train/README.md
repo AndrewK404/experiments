@@ -202,15 +202,29 @@ cd /workspace
 git clone https://github.com/AndrewK404/experiments.git && cd experiments/simple-llm-train
 
 curl -LsSf https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env
-uv pip install --system "einops>=0.8" "einx>=0.4" "jaxtyping>=0.3" python-dotenv \
-    "wandb>=0.29" pyarrow huggingface-hub
+uv pip install --system --break-system-packages "einops>=0.8" "einx>=0.4" "jaxtyping>=0.3" \
+    python-dotenv "wandb>=0.29" pyarrow huggingface-hub
 
 printf 'WANDB_API_KEY=<your key>\nWANDB_MODE=online\n' > .env
+python -c "import torch, einx, wandb; print(torch.__version__, torch.cuda.is_available())"
 ```
 
-`--system` installs into the image's Python, next to its torch. To keep a venv anyway, create it
-with `uv venv --system-site-packages` so the image's torch stays visible, and run through
-`uv run --no-sync` so uv does not resync the project and reinstall torch behind your back.
+`--system` installs into the image's Python, next to its torch, so everything afterwards runs as
+plain `python`. Ubuntu marks that interpreter `EXTERNALLY-MANAGED` (PEP 668), hence
+`--break-system-packages` -- the warning exists to protect a long-lived machine's apt packages,
+which is not what a disposable pod is.
+
+To keep a venv instead, create it so the image's torch stays visible and activate it:
+
+```bash
+uv venv --system-site-packages --python /usr/bin/python3
+source .venv/bin/activate
+uv pip install "einops>=0.8" "einx>=0.4" "jaxtyping>=0.3" python-dotenv "wandb>=0.29" pyarrow huggingface-hub
+```
+
+Either way, never `uv sync` here: it builds the venv strictly from `uv.lock` and pulls torch from
+PyPI. If you do use a venv without activating it, run through `uv run --no-sync`, or uv resyncs the
+project and reinstalls torch behind your back.
 
 ### Run
 
