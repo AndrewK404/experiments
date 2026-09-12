@@ -37,13 +37,15 @@ def build(cfg: Config, vocab_size: int, device: str):
     torch.manual_seed(cfg.seed)
     model = BasicsTransformerLM(vocab_size=vocab_size, **vars(cfg.model)).to(device)
     opt = AdamW(model.parameters(), lr=cfg.train.lr, betas=tuple(cfg.train.betas), weight_decay=cfg.train.weight_decay)
-    step = 0
+    step, run_id, best_val = 0, None, float("inf")
     if cfg.train.resume:
         ckpt = torch.load(cfg.train.resume, map_location=device)
         model.load_state_dict(ckpt["model"])
         opt.load_state_dict(ckpt["optimizer"])
         step = ckpt["step"]
-    return model, opt, step
+        run_id = ckpt.get("run_id")  # .get: checkpoints written before these fields existed still load
+        best_val = ckpt.get("best_val", float("inf"))
+    return model, opt, step, run_id, best_val
 
 
 @torch.no_grad()
@@ -83,9 +85,19 @@ def should_eval(step: int, cfg: Config) -> bool:
     return step % every == 0
 
 
-def save_ckpt(model, opt, step: int, cfg: Config, path: str) -> None:
-    """Weights + optimizer + step + config: the whole run is recoverable from ckpt.pt."""
-    torch.save({"model": model.state_dict(), "optimizer": opt.state_dict(), "step": step, "config": cfg.to_dict()}, path)
+def save_ckpt(model, opt, step: int, cfg: Config, path: str, run_id: str | None, best_val: float) -> None:
+    """Weights + optimizer + step + config + run identity: the whole run resumes from this one file."""
+    torch.save(
+        {
+            "model": model.state_dict(),
+            "optimizer": opt.state_dict(),
+            "step": step,
+            "config": cfg.to_dict(),
+            "run_id": run_id,  # so a resumed run continues the same W&B run instead of starting a new one
+            "best_val": best_val,
+        },
+        path,
+    )
 
 
 @torch.no_grad()
@@ -109,13 +121,15 @@ def train(cfg: Config) -> dict:
     device = pick_device(cfg.device)
     torch.backends.cuda.matmul.allow_tf32 = True  # matters when amp is off; free on Ampere and newer
     train_ds, val_ds, tok = data.load(cfg.data)
-    model, opt, step = build(cfg, tok.vocab_size, device)
+    model, opt, step, run_id, best_val = build(cfg, tok.vocab_size, device)
     os.makedirs(cfg.out_dir, exist_ok=True)
     cfg.save(f"{cfg.out_dir}/config.json")
-    ckpt_path = f"{cfg.out_dir}/ckpt.pt"
+    ckpt_path, best_path = f"{cfg.out_dir}/ckpt.pt", f"{cfg.out_dir}/best.pt"
     run = wandb.init(
         project=cfg.wandb.project,
-        name=run_name(cfg),
+        name=None if run_id else run_name(cfg),  # a resumed run keeps the name it already has
+        id=run_id,
+        resume="allow" if run_id else None,
         mode=cfg.wandb.mode,
         config={**cfg.to_dict(), "runtime": {"device": device, "git_sha": git_sha(), "vocab_size": tok.vocab_size}},
     )
@@ -137,7 +151,7 @@ def train(cfg: Config) -> dict:
 
     # Step 0 is the untrained baseline: val_loss should land near ln(vocab_size), and the sample
     # shows what "no training at all" looks like for this prompt.
-    val_loss = log_eval(step) if step == 0 else float("nan")
+    val_loss, loss = (log_eval(step) if step == 0 else float("nan")), float("nan")
     t0 = time.time()
     while step < cfg.train.max_steps:
         loss, lr = train_step(model, opt, train_ds, cfg, device, step)
@@ -148,15 +162,22 @@ def train(cfg: Config) -> dict:
             t0 = time.time()
         if should_eval(step, cfg):
             val_loss = log_eval(step)
+            if val_loss < best_val:
+                # ckpt.pt is the latest state and a diverging run will overwrite it; best.pt is the
+                # one that survives, and best_val rides along so a resume cannot clobber it either.
+                best_val = val_loss
+                save_ckpt(model, opt, step, cfg, best_path, run.id, best_val)
             t0 = time.time()  # eval and generation must not leak into the next step_time
         if step % cfg.train.ckpt_every == 0 or step == cfg.train.max_steps:
-            save_ckpt(model, opt, step, cfg, ckpt_path)
+            save_ckpt(model, opt, step, cfg, ckpt_path, run.id, best_val)
 
     metrics = {"val_loss": val_loss, "train_loss": loss, "steps": step, "params_M": model.get_num_params() / 1e6}
     with open(f"{cfg.out_dir}/metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
     art = wandb.Artifact("model", type="model", metadata=metrics)
     art.add_file(ckpt_path)
+    if os.path.exists(best_path):
+        art.add_file(best_path)
     run.log_artifact(art)
     run.finish()
     return metrics

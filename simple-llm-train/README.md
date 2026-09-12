@@ -159,7 +159,11 @@ Two things the config does beyond holding values:
 
 Provide the key via `.env` (`WANDB_API_KEY`), `wandb login`, or the environment. Logged per run:
 `train/loss`, `val/loss`, `lr`, `step_time`, a text sample at every eval (one cumulative table),
-and the checkpoint as an artifact.
+and the checkpoints as an artifact.
+
+A resumed run continues the original W&B run rather than starting a second one: the run id is
+written into the checkpoint and passed back to `wandb.init(id=..., resume="allow")`, so the charts
+stay on one timeline.
 
 Run names carry a to-the-second timestamp: `wandb.name = "gpu"` shows up as
 `gpu 2026-09-10 19:52:01`, and leaving it `null` names the run by timestamp alone -- reruns of the
@@ -249,6 +253,11 @@ python -u train.py --profile code --train.max_steps <n> 2>&1 | tee runs/code/tra
 `python -u` matters here: through a pipe stdout is block-buffered, so without it the log stays
 empty for minutes. Reattach with `tmux attach -t train`, and resume an interrupted run with
 `--train.resume runs/code/ckpt.pt --train.max_steps <higher>`.
+
+Two checkpoints are kept. `ckpt.pt` is the latest state and is what you resume from; `best.pt` is
+the lowest `val/loss` seen so far. They are separate because a diverging run keeps overwriting
+`ckpt.pt` with worse weights -- `best.pt` is what survives that. The best score travels inside the
+checkpoint, so resuming cannot overwrite `best.pt` with something worse either.
 
 ## Notes
 
