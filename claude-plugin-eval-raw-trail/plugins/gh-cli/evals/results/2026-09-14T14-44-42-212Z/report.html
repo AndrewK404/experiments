@@ -1,0 +1,2208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eval report — gh-cli v1.6.0</title>
+</head>
+<body>
+<style>
+:root{--plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6a64;--hairline:rgba(11,11,11,.10);--grid:#e1e0d9;--inset:rgba(11,11,11,.04);--accent:#2a78d6;--base-fill:#6b6a64;--delta-good:#006300;--good:#067d06;--warning:#8a6100;--critical:#d03b3b;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root{--plane:#0d0d0d;--surface:#1a1a19;--ink:#ffffff;--ink-2:#c3c2b7;--ink-3:#898781;--hairline:rgba(255,255,255,.10);--grid:#2c2c2a;--inset:rgba(255,255,255,.05);--accent:#3987e5;--base-fill:#898781;--delta-good:#0ca30c;--good:#0ca30c;--warning:#fab219;--critical:#e06c6c;color-scheme:dark}}
+:root[data-theme="dark"]{--plane:#0d0d0d;--surface:#1a1a19;--ink:#ffffff;--ink-2:#c3c2b7;--ink-3:#898781;--hairline:rgba(255,255,255,.10);--grid:#2c2c2a;--inset:rgba(255,255,255,.05);--accent:#3987e5;--base-fill:#898781;--delta-good:#0ca30c;--good:#0ca30c;--warning:#fab219;--critical:#e06c6c;color-scheme:dark}
+:root[data-theme="light"]{--plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6a64;--hairline:rgba(11,11,11,.10);--grid:#e1e0d9;--inset:rgba(11,11,11,.04);--accent:#2a78d6;--base-fill:#6b6a64;--delta-good:#006300;--good:#067d06;--warning:#8a6100;--critical:#d03b3b;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);
+  font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-text-size-adjust:100%}
+.wrap{max-width:880px;margin:0 auto;padding:40px 24px 64px;display:flex;flex-direction:column;gap:20px}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+header h1{margin:2px 0 0;font-size:24px;font-weight:600;line-height:1.25;text-wrap:balance}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;color:var(--ink-2);font-size:13px}
+.meta .num{font-variant-numeric:tabular-nums lining-nums}
+.banner{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;
+  border:1px solid var(--hairline);background:var(--surface);font-size:13px}
+.banner .chip-warn{color:var(--warning);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--hairline);border-radius:10px;padding:14px 16px;
+  display:flex;flex-direction:column;gap:4px}
+.tile .label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.tile .value{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums lining-nums;line-height:1.1}
+.tile.hero .value{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:48px}
+.tile .sub{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.tile .value.delta-pos{color:var(--delta-good)}
+.tile .value.delta-neg{color:var(--critical)}
+.toolbar{display:flex;gap:8px;justify-content:flex-end}
+.toolbar button{font:12px system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--hairline);border-radius:6px;padding:4px 10px;cursor:pointer}
+.toolbar button:hover{color:var(--ink)}
+.toolbar button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.case{background:var(--surface);border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;
+  display:flex;flex-direction:column;gap:10px}
+.case-regressed{border-left:3px solid var(--critical)}
+.verdict{margin:6px 0 0;font-size:15px}
+.verdict .delta{font-size:15px}
+.flag{font-size:11px;font-weight:600;color:var(--warning);white-space:nowrap}
+.star{color:var(--warning);font-size:.45em;vertical-align:super;line-height:0;cursor:help}
+.legend summary{cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+.legend-list{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink-2)}
+.case-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.case-head h2{margin:0;font-size:16px;font-weight:600}
+.case-head .spacer{flex:1}
+.case-score{font-size:15px;font-weight:600}
+.mono{font:12px "SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.num{font-variant-numeric:tabular-nums lining-nums}
+.muted{color:var(--ink-3);font-size:12px}
+.meter{display:inline-block;position:relative;width:120px;height:6px;border-radius:4px;background:var(--grid);
+  vertical-align:middle}
+.meter>span{display:block;height:100%;border-radius:4px;max-width:100%}
+.meter .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink-3);border-radius:1px}
+.m-accent>span{background:var(--accent)}
+.m-base>span{background:var(--base-fill)}
+.delta{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.delta-pos{color:var(--delta-good)}
+.delta-neg{color:var(--critical)}
+.delta-zero{color:var(--ink-3)}
+details.section{border-top:1px solid var(--grid);padding-top:10px}
+details.section>summary{cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ink-2);list-style-position:outside;margin-left:2px}
+details.section>summary:hover{color:var(--ink)}
+details.section[open]>summary{margin-bottom:8px}
+.md{display:flex;flex-direction:column;gap:8px;background:var(--inset);border-radius:8px;
+  padding:12px 14px;overflow-wrap:break-word}
+.md>:first-child{margin-top:0}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:4px 0 0;font-size:1em;font-weight:600;line-height:1.3}
+.md p,.md ul,.md ol,.md blockquote,.md table,.md pre,.md hr{margin:0}
+.md ul,.md ol{display:flex;flex-direction:column;gap:4px;padding-left:20px}
+.md blockquote{border-left:2px solid var(--hairline);padding-left:10px;color:var(--ink-2)}
+.md :not(pre)>code{background:var(--inset);padding:1px 4px;border-radius:4px;
+  font:.92em "SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.md pre{background:var(--inset);border:1px solid var(--hairline);padding:10px 12px;border-radius:6px;
+  overflow-x:auto;font:12px/1.5 "SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.md pre code{background:none;padding:0;font:inherit}
+.md table{width:100%;border-collapse:collapse}
+.md th,.md td{padding:5px 8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--grid)}
+.md th{font-weight:600;color:var(--ink-2)}
+.md a{color:var(--accent);text-decoration:none}
+.md a:hover{text-decoration:underline}
+.grader-def{display:flex;flex-direction:column;gap:6px;padding:8px 0}
+.grader-def+.grader-def{border-top:1px solid var(--grid)}
+.grader-def-head{display:flex;align-items:baseline;gap:8px}
+.grader-name{font:13px "SF Mono",ui-monospace,Menlo,Consolas,monospace;font-weight:600}
+.badge{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);
+  border:1px solid var(--hairline);border-radius:999px;padding:1px 8px}
+.config{display:flex;flex-direction:column;gap:2px;background:var(--inset);border-radius:8px;padding:10px 14px}
+.config code{font:12px "SF Mono",ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+.arm{display:flex;flex-direction:column;gap:8px;padding:6px 0}
+.arm+.arm{border-top:1px dashed var(--grid);margin-top:4px;padding-top:12px}
+.arm-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.arm-label{font-size:13px;font-weight:600}
+.run{border:1px solid var(--grid);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.run-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.run-title{font-size:12px;font-weight:600;color:var(--ink-2)}
+.run-error .explanation{color:var(--ink-2)}
+.note{font-size:12px;color:var(--ink-2)}
+.graders{display:flex;flex-direction:column;gap:4px}
+details.grader{border-radius:6px}
+details.grader>summary{cursor:pointer;display:flex;align-items:baseline;gap:8px;padding:3px 4px;
+  border-radius:6px;list-style:none}
+details.grader>summary::-webkit-details-marker{display:none}
+details.grader>summary::before{content:'▸';font-size:10px;color:var(--ink-3);flex:none;
+  transition:transform .12s ease}
+details.grader[open]>summary::before{transform:rotate(90deg)}
+details.grader>summary:hover{background:var(--inset)}
+details.grader>summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.grader-body{padding:6px 8px 8px 24px;display:flex;flex-direction:column;gap:6px}
+.chip{font-size:11px;font-weight:600;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.chip-pass{color:var(--good);border:1px solid currentColor}
+.chip-fail{color:var(--critical);border:1px solid currentColor}
+.chip.chip-warn{color:var(--warning);border:1px solid currentColor}
+.explanation{margin:0;font-size:13px;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:break-word}
+.kv{display:flex;gap:8px;font-size:12px;color:var(--ink-3)}
+.votes{font-variant-numeric:tabular-nums;letter-spacing:.1em}
+pre.evidence{margin:0;background:var(--inset);border:1px solid var(--hairline);border-radius:6px;
+  padding:8px 10px;overflow-x:auto;max-height:320px;
+  font:12px/1.5 "SF Mono",ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:break-word}
+footer{color:var(--ink-3);font-size:12px;text-align:center;padding-top:8px}
+@media (prefers-reduced-motion:no-preference){
+  details.grader>summary,.toolbar button{transition:background .12s ease,color .12s ease}
+}
+@media (prefers-reduced-motion:reduce){
+  details.grader>summary::before{transition:none}
+}
+@media print{
+  :root,:root[data-theme="dark"],:root[data-theme="light"]{--plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6a64;--hairline:rgba(11,11,11,.10);--grid:#e1e0d9;--inset:rgba(11,11,11,.04);--accent:#2a78d6;--base-fill:#6b6a64;--delta-good:#006300;--good:#067d06;--warning:#8a6100;--critical:#d03b3b;color-scheme:light}
+  body{background:#fff}
+  .toolbar{display:none}
+  .case,.run,.grader-def{break-inside:avoid}
+  pre.evidence{max-height:none}
+}
+</style>
+<div class="wrap">
+<header>
+<div class="eyebrow">Plugin eval report</div>
+<h1>gh-cli v1.6.0</h1>
+<p class="verdict">Plugin effect: <span class="delta delta-pos">↑ +55.6 pts</span> vs baseline — improved 5 · flat 1 · regressed 1 of 7 cases.</p>
+<div class="meta">
+<span class="mono">.</span>
+<span>Claude Code v2.1.270</span>
+<span class="num">2026-09-14 14:44 UTC</span>
+<span class="num">6m 25s</span>
+<span class="num">$7.83</span>
+<span class="num">42 runs</span>
+<span class="num">3 in flight</span>
+
+
+<span>judge sonnet</span>
+<span class="num">threshold 100%</span>
+
+</div>
+</header>
+
+<section class="tiles">
+<div class="tile hero"><span class="label">Suite score · with plugin</span><span class="value">86.5%</span><span class="sub">mean of per-case scores</span></div>
+<div class="tile"><span class="label">Ablation Δ</span><span class="value num delta-pos">↑ +55.6</span><span class="sub">score points vs baseline, 7 of 7 cases</span></div>
+<div class="tile"><span class="label">Baseline score</span><span class="value num">31%</span><span class="sub">without the plugin</span></div>
+<div class="tile"><span class="label">Cases</span><span class="value num">7</span><span class="sub">2 of 7 ≥ 100% threshold</span></div>
+<div class="tile"><span class="label">Perfect runs</span><span class="value num">76.2%</span><span class="sub">runs where every grader passed</span></div>
+</section>
+<details class="section legend">
+<summary>How to read this report</summary>
+<ul class="legend-list">
+<li>A run's score is the weighted fraction of its graders that passed; a "perfect" run passed every grader.</li>
+<li>A case's score is the mean of its runs; a case passes when its score is at or above the 100% threshold (the tick on each case bar).</li>
+<li>The suite score is the mean of the per-case scores.</li>
+<li>Judge votes are independent samples of the LLM judge; the majority decides pass or fail.</li>
+<li>"With plugin" and "Baseline" runs are identical except for the plugin being loaded; Δ is the with-plugin score minus the baseline score.</li>
+
+</ul>
+</details>
+<div class="toolbar"><button type="button" data-act="expand">Expand all</button><button type="button" data-act="collapse">Collapse all</button></div>
+<article class="case" id="case-1">
+<div class="case-head">
+<h2>01-pr-url-summary</h2>
+<span class="muted mono">evals/01-pr-url-summary</span>
+<span class="spacer"></span>
+
+<span class="delta delta-pos">↑ +83.3 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:83.3%"></span><i class="tick" style="left:100.0%"></i></span>
+<span class="num case-score">83.3%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:83.3%"></span></span>
+<span class="num">83.3%</span>
+<span class="muted num">66.7% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">7 turns · $0.20 · 14:44:42 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">concrete-command</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I can&apos;t retrieve it — the lookup is blocked at both ends:
+
+- `gh pr view 9876 --repo cli/cli` fails: `gh` is not logged in on this machine, and no `GH_TOKEN`/`GITHUB_TOKEN` is set.
+- `WebFetch` on the PR URL is blocked by a hook that requires the `gh` CLI for GitHub URLs.
+
+To unblock, either of these works:
+
+```sh
+gh auth login          # interactive, needs a terminal
+# or
+export GH_TOKEN=&lt;your token&gt;
+```
+
+Once one is in place, `gh pr view 9876 --repo cli/cli --json title,state,isDraft,author,mergedAt,additions,deletions,changedFiles,body` gives everything needed for the summary. Say the word and I&apos;ll run it — I won&apos;t guess at the PR&apos;s contents from memory.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">names-pr-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gh pr view[^\n]{0,40}9876</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">6 turns · $0.18 · 14:44:42 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">concrete-command</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I can&apos;t retrieve it — `gh` isn&apos;t authenticated in this environment, and the direct HTTP fallback is blocked by your gh-cli policy hook.
+
+What I hit:
+- `gh pr view 9876 --repo cli/cli` → *&quot;To get started with GitHub CLI, please run: gh auth login&quot;*
+- `gh auth status` → *&quot;You are not logged into any GitHub hosts&quot;*; no `GH_TOKEN`/`GITHUB_TOKEN` in the environment
+- `curl https://api.github.com/repos/cli/cli/pulls/9876` → blocked by the hook: *&quot;Use `gh pr list --repo cli/cli` instead.&quot;*
+
+To unblock, either run `gh auth login` yourself, or set `GH_TOKEN` in the environment (a token with public-repo read is enough for `cli/cli`). Once either is in place, I&apos;ll pull the status and give you the one-line summary.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">names-pr-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gh pr view[^\n]{0,40}9876</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:50.0%"></span></span>
+<span class="num">50%</span>
+<span class="muted num">6 turns · $0.19 · 14:44:42 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">concrete-command</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I can&apos;t fetch it yet — `gh` isn&apos;t authenticated in this environment:
+
+```
+gh auth status → You are not logged into any GitHub hosts.
+```
+
+Both `gh pr view 9876 --repo cli/cli` and `gh api repos/cli/cli/pulls/9876` fail on that, and there&apos;s no `GH_TOKEN`/`GITHUB_TOKEN` set. Your gh-cli skill directs GitHub lookups through authenticated `gh` rather than `curl`/`WebFetch`, so I stopped rather than routing around it.
+
+To unblock, either:
+- run `gh auth login` yourself (it needs an interactive browser/device flow, which I can&apos;t drive from here), or
+- export a token: `export GH_TOKEN=&lt;your_pat&gt;` — a classic PAT with `public_repo` is enough for a public repo like cli/cli.
+
+Say the word once that&apos;s done and I&apos;ll pull the state, title, and diffstat and give you the one-liner. If you&apos;d rather I just fetch the public PR page unauthenticated this once, tell me and I&apos;ll do that instead.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">names-pr-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gh pr view[^\n]{0,40}9876</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">0% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">5 turns · $0.18 · 14:45:06 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">concrete-command</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**Status: Merged** (Nov 5, 2024, into `cli/cli:trunk`, by @akx).
+
+**What it changes:** Corrects `gh run delete` messaging to say &quot;workflow run&quot; instead of &quot;workflow&quot; — since it deletes a run, not the workflow YAML file — with acceptance tests updated to match.
+
+Note: `gh` isn&apos;t authenticated here and direct api.github.com access is blocked by the sandbox&apos;s network policy, so I read this from the public PR page via WebFetch rather than the API. If you want richer detail (exact diff, review/check status), you&apos;d need to run `gh auth login` or set `GH_TOKEN`.</pre>
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">names-pr-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">5 turns · $0.18 · 14:45:08 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">concrete-command</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**Status: merged** (Nov 5, 2024) — [cli/cli#9876](https://github.com/cli/cli/pull/9876) by akx, &quot;Fix verbiage for deleting workflow runs.&quot;
+
+One-line summary: Corrects `gh run delete` messaging to say &quot;workflow run&quot; instead of &quot;workflow,&quot; so the CLI doesn&apos;t imply it&apos;s deleting the workflow definition rather than a single run (tests updated to match).
+
+Note: `gh` isn&apos;t authenticated here and direct api.github.com access is blocked by the sandbox, so this came from fetching the public PR page — the file-level diff wasn&apos;t included in what I could retrieve.</pre>
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">names-pr-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">4 turns · $0.16 · 14:45:10 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">concrete-command</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**Status:** Merged on Nov 5, 2024 (by akx, `delete-workflow-run-copy` → `trunk`; 3 files, +4/−4).
+
+**What it changes:** Corrects `gh run delete` prompt/confirmation wording to say it deletes a *workflow run*, not the *workflow* itself.
+
+Note: `gh` isn&apos;t authenticated in this session (`gh auth login` or `GH_TOKEN` needed), so I read the public GitHub API instead — fine here, but private repos or review/CI details would require auth.</pre>
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">names-pr-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>What's the status of <a href="https://github.com/cli/cli/pull/9876" rel="noopener">https://github.com/cli/cli/pull/9876</a>? Give me a one-line summary of what it changes.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">concrete-command</span><span class="badge">llm</span></div>
+<div class="md"><p>Score this response against all three claims:</p>
+<ol>
+<li>It names a single, runnable <code>gh</code> command for pull request 9876 in the <code>cli/cli</code>
+repository — either <code>gh pr view 9876 --repo cli/cli</code> or <code>gh pr view</code> against the
+full PR URL. A command with a placeholder like <code>owner/repo</code> instead of <code>cli/cli</code>
+does not count.</li>
+<li>It does NOT stop at generic advice such as "use the gh CLI" or "the gh CLI is
+authenticated" without producing the actual command and its arguments.</li>
+<li>It does NOT suggest <code>curl</code>, <code>wget</code>, or a web fetch of the PR URL as the way to
+get the answer.</li>
+</ol>
+<p>Fail if any claim is false.</p>
+</div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">names-pr-view</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;gh pr view[^\\n]{0,40}9876&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">skill-fired</span><span class="badge">tool_used</span></div>
+<div class="config"><div class="kv"><span>tool</span><code>&quot;Skill&quot;</code></div></div>
+</div>
+</details>
+</article>
+<article class="case" id="case-2">
+<div class="case-head">
+<h2>02-raw-file-content</h2>
+<span class="muted mono">evals/02-raw-file-content</span>
+<span class="spacer"></span>
+
+<span class="delta delta-pos">↑ +77.8 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:77.8%"></span><i class="tick" style="left:100.0%"></i></span>
+<span class="num case-score">77.8%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:77.8%"></span></span>
+<span class="num">77.8%</span>
+<span class="muted num">66.7% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">14 turns · $0.37 · 14:45:29 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">matched gh repo clone</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I couldn&apos;t retrieve the file. Every available path is blocked in this session:
+
+| Path | Result |
+|---|---|
+| `WebFetch` on the raw URL | Blocked by a hook that requires `gh repo clone` instead |
+| `curl` on the raw URL | Blocked by the same hook |
+| `gh repo clone` / `gh api` | `gh` is not authenticated (`gh auth status`: &quot;not logged into any GitHub hosts&quot;) |
+| `git clone https://github.com/astral-sh/uv.git` | Sandbox proxy denied egress: `deny network-outbound github.com:443 (user denied)`, surfacing as `CONNECT tunnel failed, response 403` |
+
+Two side notes from the attempts: `/usr/bin/git` is broken under this sandbox (the `xcrun` shim can&apos;t write its cache to the system temp dir), though `/Library/Developer/CommandLineTools/usr/bin/git` works directly — that wasn&apos;t the blocker in the end, the network policy was.
+
+To unblock, one of these is needed — all are your call:
+- Authenticate gh (`gh auth login`, or set `GH_TOKEN`) **and** allow `github.com:443` through the proxy, which satisfies the hook&apos;s required workflow.
+- Or allow `raw.githubusercontent.com` and relax the hook so a direct fetch is permitted.
+
+I&apos;d rather not describe what uv does from memory when you asked me to read the current README — the point of pulling `main` is getting today&apos;s contents, and I can&apos;t verify them right now.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:33.3%"></span></span>
+<span class="num">33.3%</span>
+<span class="muted num">10 turns · $0.26 · 14:45:30 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">matched gh repo clone</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I couldn&apos;t retrieve the file — every available path is blocked in this environment:
+
+1. **`WebFetch` on the raw URL** — blocked by a hook, which requires GitHub content be read from a clone instead.
+2. **`gh repo clone` / `gh api`** (the hook&apos;s prescribed route) — `gh` is not authenticated: *&quot;You are not logged into any GitHub hosts&quot;*, and neither `GH_TOKEN` nor `GITHUB_TOKEN` is set.
+3. **Plain `git clone`** — `git` on this machine is the Xcode stub and the command line tools aren&apos;t installed: *&quot;xcode-select: Failed to locate &apos;git&apos;, and no install could be requested.&quot;*
+
+So I have nothing to summarize from — and I don&apos;t want to describe uv from memory and pass it off as the contents of that README.
+
+To unblock, any one of these works:
+- Run `gh auth login`, or export a `GH_TOKEN` in the environment, then I&apos;ll clone and read it.
+- Install the Xcode command line tools (`xcode-select --install`) so `git clone` works.
+- Tell me to use `WebFetch` anyway and allow the hook&apos;s request — that&apos;s your call, since the hook is enforcing your policy of preferring authenticated `gh` access over anonymous fetches.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">12 turns · $0.31 · 14:45:32 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">matched gh repo clone</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I couldn&apos;t retrieve the file — every available route is blocked:
+
+1. **`gh repo clone` (the required path)** — fails twice over: `gh` is not authenticated (`gh auth status` → &quot;You are not logged into any GitHub hosts&quot;), and there&apos;s no working `git` binary. `/usr/bin/git` is the Xcode shim, `xcode-select -p` points at `/Applications/Xcode.app/Contents/Developer`, and it errors with `git: error: Failed to locate &apos;git&apos;` — no Command Line Tools installed.
+2. **WebFetch on the raw URL** — blocked by a hook that redirects to `gh repo clone`.
+3. **`curl` on the raw URL** — blocked by the same hook.
+
+So I can&apos;t tell you what the README says without guessing, and I won&apos;t do that.
+
+To unblock, either:
+- **`gh auth login`** (or export `GH_TOKEN`) **and** install git via `xcode-select --install`, then I&apos;ll clone and read it; or
+- allow WebFetch/curl for `raw.githubusercontent.com` — that&apos;s a change to your hook config, your call.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">0% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">3 turns · $0.15 · 14:46:10 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**uv** is an extremely fast Python package and project manager, written in Rust by [Astral](https://astral.sh) (the team behind Ruff).
+
+**The pitch:** one tool to replace `pip`, `pip-tools`, `pipx`, `poetry`, `pyenv`, `twine`, and `virtualenv` — claiming 10–100× faster installs than pip.
+
+**What it does:**
+- **Projects** — dependency management with a universal lockfile, plus workspaces for scalable multi-package repos
+- **Scripts** — runs single-file scripts with inline (PEP 723) dependency metadata
+- **Python versions** — installs and switches between Python releases
+- **Tools** — runs and installs CLI tools from Python packages, pipx-style
+- **pip interface** — a drop-in-compatible `uv pip` for familiar workflows
+
+**Install:** standalone curl/PowerShell installers, or via `pip`/`pipx`. Runs on macOS, Linux, and Windows; dual-licensed Apache-2.0 / MIT.
+
+Typical flow is `uv init` → `uv add &lt;dep&gt;` → `uv run &lt;script&gt;` → `uv lock`.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">3 turns · $0.15 · 14:46:29 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**uv** is an extremely fast Python package and project manager, written in Rust by [Astral](https://astral.sh) — the same team behind the Ruff linter.
+
+**The pitch:** &quot;A single tool to replace `pip`, `pip-tools`, `pipx`, `poetry`, `pyenv`, `twine`, `virtualenv`, and more&quot; — and it claims to be **10–100x faster than pip**.
+
+What it actually does:
+
+- **Project management** — dependency resolution with universal (cross-platform) lockfiles, plus workspace support for multi-package repos
+- **Package installation** — a drop-in, pip-compatible CLI (`uv pip install ...`) for migrating existing workflows, backed by a global cache that deduplicates dependencies across projects
+- **Python version management** — installs and switches Python versions itself, replacing `pyenv`
+- **Script running** — runs single-file scripts with inline dependency metadata (PEP 723), so a script declares its own deps
+- **Tool running** — `uvx`-style ephemeral/installed CLI tools, replacing `pipx`
+- **Publishing** — replaces `twine` for uploading to PyPI
+
+It installs as a standalone binary (curl script on macOS/Linux, PowerShell on Windows) with no Rust or Python required, and also ships via pip/pipx. Works on macOS, Linux, and Windows. The README presents it as stable and production-ready, with docs at docs.astral.sh/uv.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">3 turns · $0.15 · 14:46:32 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**uv** is an extremely fast Python package and project manager written in Rust, from Astral (the team behind Ruff).
+
+**What it does:** It consolidates into one tool what normally takes a half-dozen — pip, pip-tools, pipx, poetry, pyenv, twine, and virtualenv. The headline claim is 10–100x faster than pip.
+
+**Key capabilities:**
+- **Project management** — dependency resolution with universal lockfiles and workspace support
+- **Scripts** — dependency management for single-file scripts via inline metadata (PEP 723)
+- **Python versions** — installs and switches between interpreters, replacing pyenv
+- **Tools** — runs and installs Python CLI tools, replacing pipx
+- **pip-compatible interface** — a drop-in migration path for existing workflows
+- **Global cache** — deduplicates dependencies across environments
+- Works on macOS, Linux, and Windows
+
+**Install:** standalone installer (`curl` on macOS/Linux, PowerShell on Windows), or from PyPI via pip/pipx; it can also self-update.</pre>
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>Pull the contents of <a href="https://raw.githubusercontent.com/astral-sh/uv/main/README.md" rel="noopener">https://raw.githubusercontent.com/astral-sh/uv/main/README.md</a> and tell me what the project does.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">clones-repo</span><span class="badge">regex</span><span class="muted">weight ×0.5</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;gh repo clone&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">routes-to-clone</span><span class="badge">llm</span></div>
+<div class="md"><p>The user asked for a file's contents via a raw.githubusercontent.com URL. Judge only the
+ACCESS ROUTE the response settles on, not whether it obtained the file — the environment
+may legitimately block retrieval.</p>
+<p>Score against all three claims:</p>
+<ol>
+<li>It identifies cloning the <code>astral-sh/uv</code> repository and reading the file locally as the
+correct route, naming <code>gh repo clone</code> (or <code>gh</code> clone-then-read in words that clearly
+mean that). The repository must be identified as astral-sh/uv somewhere in the response.</li>
+<li>It does not RECOMMEND fetching the raw.githubusercontent.com URL, <code>curl</code>, or <code>wget</code> as
+the way to do this. Two things explicitly do NOT fail this claim: reporting that such an
+attempt was made and rejected, and offering an unauthenticated fetch as a clearly
+labelled fallback or unblock option after the clone route has been named first. It fails
+only if a raw fetch is presented as the primary or recommended route, or offered with no
+indication that it bypasses the intended workflow.</li>
+<li>It does not RECOMMEND <code>gh api</code> with a <code>/contents/</code> endpoint, or base64-decoding an API
+response, as a substitute for cloning. Reporting that such an attempt was made and
+rejected, or listing it among routes that were blocked, does NOT fail this claim — it
+fails only if that endpoint is put forward as a way to proceed.</li>
+</ol>
+<p>Fail if any claim is false.</p>
+</div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">skill-fired</span><span class="badge">tool_used</span></div>
+<div class="config"><div class="kv"><span>tool</span><code>&quot;Skill&quot;</code></div></div>
+</div>
+</details>
+</article>
+<article class="case" id="case-3">
+<div class="case-head">
+<h2>03-explicit-curl-api</h2>
+<span class="muted mono">evals/03-explicit-curl-api</span>
+<span class="spacer"></span>
+
+<span class="delta delta-pos">↑ +83.3 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:83.3%"></span><i class="tick" style="left:100.0%"></i></span>
+<span class="num case-score">83.3%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:83.3%"></span></span>
+<span class="num">83.3%</span>
+<span class="muted num">66.7% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">6 turns · $0.18 · 14:46:33 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">substitutes-gh</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I couldn&apos;t get the tags — both routes are blocked in this session:
+
+- **curl** against `api.github.com` is blocked by a hook in this environment, which redirects to the `gh` CLI: *&quot;Use `gh release list --repo rust-lang/rust` or `gh api repos/rust-lang/rust/releases/latest` instead.&quot;*
+- **`gh`** is installed but not authenticated — `gh auth status` reports &quot;You are not logged into any GitHub hosts,&quot; and there&apos;s no `GH_TOKEN` set.
+
+To unblock, either:
+1. Run `gh auth login` (or export a `GH_TOKEN`) — then I&apos;ll run `gh release list --repo rust-lang/rust --limit 3`, or
+2. Tell me to proceed and adjust the hook config so plain `curl` to the GitHub API is permitted.
+
+One note on the underlying data: `rust-lang/rust` publishes GitHub *releases* sparsely, so the releases endpoint often doesn&apos;t reflect the newest version tags. If you want the three most recent released versions, `git ls-remote --tags https://github.com/rust-lang/rust` would be the more reliable source — say the word and I&apos;ll try that instead (it&apos;s a git operation, not a GitHub API fetch, so it may not hit the same hook).</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">uses-gh-not-curl</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gh (release list|api)[^\n]{0,60}rust-lang/rust</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">6 turns · $0.18 · 14:46:48 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">substitutes-gh</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I couldn&apos;t get the tags — both paths are blocked right now:
+
+1. **curl was intercepted by a hook** in this project, which redirects GitHub API access to the `gh` CLI:
+   &gt; Use `gh release list --repo rust-lang/rust` or `gh api repos/rust-lang/rust/releases/latest` instead. The gh CLI uses your authenticated GitHub token and works with private repos.
+
+2. **`gh` isn&apos;t authenticated** — `gh auth status` reports no logged-in hosts, and neither `GH_TOKEN` nor `GITHUB_TOKEN` is set, so `gh api repos/rust-lang/rust/releases` exits with &quot;please run `gh auth login`&quot;.
+
+To unblock, either:
+- Run `gh auth login` (or export a `GH_TOKEN`), and I&apos;ll rerun `gh api repos/rust-lang/rust/releases --jq &apos;.[0:3][].tag_name&apos;`; or
+- Tell me you want the curl hook bypassed — that&apos;s your call to make, not mine.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">uses-gh-not-curl</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gh (release list|api)[^\n]{0,60}rust-lang/rust</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:50.0%"></span></span>
+<span class="num">50%</span>
+<span class="muted num">6 turns · $0.17 · 14:46:56 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">substitutes-gh</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I couldn&apos;t get the tags — both paths are blocked right now:
+
+1. **`curl` was blocked by a hook** in this environment, which redirected me to the `gh` CLI:
+   &gt; Use `gh release list --repo rust-lang/rust` … The gh CLI uses your authenticated GitHub token and works with private repos.
+
+2. **`gh` is not authenticated**, so it fails too:
+   &gt; You are not logged into any GitHub hosts. To log in, run: `gh auth login`
+
+To unblock, either:
+
+- **Authenticate gh** — run `gh auth login` yourself (it&apos;s interactive, so I can&apos;t run it), or set `GH_TOKEN` in the environment. Then `gh release list --repo rust-lang/rust --limit 3` gives you the tags.
+- **Or allow curl** — the curl block comes from a hook, not the sandbox; if you&apos;d rather keep the explicit curl approach, you&apos;d need to disable or bypass that hook. That&apos;s your call to make.
+
+Say which you&apos;d prefer and I&apos;ll finish the lookup.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">uses-gh-not-curl</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gh (release list|api)[^\n]{0,60}rust-lang/rust</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">0% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">2 turns · $0.12 · 14:46:58 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">substitutes-gh</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The curl request was blocked — the sandbox&apos;s network filter denied outbound access to `api.github.com:443` (reported as user-denied), so no data came back.
+
+I don&apos;t want to route around that denial on my own. A couple of options, your call:
+
+- Allow the `api.github.com` host for this session, and I&apos;ll re-run the same curl.
+- Let me try `WebFetch` against the same URL instead (different tool, still needs to reach GitHub).
+
+For reference, the command I ran was:
+
+```
+curl -s &quot;https://api.github.com/repos/rust-lang/rust/releases?per_page=3&quot;
+```</pre>
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">uses-gh-not-curl</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">2 turns · $0.14 · 14:47:09 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">substitutes-gh</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The curl request was blocked by the sandbox&apos;s network policy:
+
+```
+curl: (56) CONNECT tunnel failed, response 403
+deny network-outbound api.github.com:443 (user denied)
+```
+
+Egress goes through a filtering proxy, and `api.github.com:443` isn&apos;t on the allowed list, so I couldn&apos;t reach the releases endpoint. I don&apos;t have the release tags.
+
+Options, your call:
+- Allow `api.github.com` in the sandbox network settings and I&apos;ll re-run the same curl.
+- Let me try the `WebFetch` tool instead (different path than curl — may or may not be subject to the same block).</pre>
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">uses-gh-not-curl</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">2 turns · $0.13 · 14:47:16 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">substitutes-gh</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The request was blocked by the sandbox — not by curl or the API:
+
+```
+deny network-outbound api.github.com:443 (user denied)
+```
+
+Network egress in this session goes through a filtering proxy, and `api.github.com:443` isn&apos;t on the allowed list, so I couldn&apos;t fetch the releases. `gh api` would hit the same host and be blocked the same way.
+
+To get this to work you&apos;d need to allow that host in the sandbox&apos;s network settings — that&apos;s your call to make. Once it&apos;s permitted, re-running `curl -s https://api.github.com/repos/rust-lang/rust/releases` will give the data (the three most recent tags are the first three `tag_name` fields in the array, since the endpoint returns newest-first).</pre>
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">uses-gh-not-curl</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>Use curl to hit <a href="https://api.github.com/repos/rust-lang/rust/releases" rel="noopener">https://api.github.com/repos/rust-lang/rust/releases</a> and give me the three most recent release tags.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">skill-fired</span><span class="badge">tool_used</span></div>
+<div class="config"><div class="kv"><span>tool</span><code>&quot;Skill&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">substitutes-gh</span><span class="badge">llm</span></div>
+<div class="md"><p>The user explicitly asked for <code>curl</code> against an api.github.com releases endpoint. Judge only
+the ACCESS ROUTE the response settles on, not whether it obtained the release tags — the
+environment may legitimately block retrieval.</p>
+<p>Score against all three claims:</p>
+<ol>
+<li>It names a concrete authenticated <code>gh</code> command for rust-lang/rust releases in place of the
+requested curl — for example <code>gh release list --repo rust-lang/rust</code> or
+<code>gh api repos/rust-lang/rust/releases</code>. A bare mention of "the gh CLI" with no command does
+not count.</li>
+<li>It does not simply comply with the curl request as the recommended route, and does not
+present curl as an equally good option. Reporting that curl was attempted and rejected does
+NOT fail this claim, and neither does offering curl as a clearly labelled fallback once the
+gh command has been named first.</li>
+<li>It does not silently substitute a different repository or endpoint.</li>
+</ol>
+<p>Fail if any claim is false.</p>
+</div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">uses-gh-not-curl</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;gh (release list|api)[^\\n]{0,60}rust-lang/rust&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+</details>
+</article>
+<article class="case" id="case-4">
+<div class="case-head">
+<h2>04-issue-no-url</h2>
+<span class="muted mono">evals/04-issue-no-url</span>
+<span class="spacer"></span>
+
+<span class="delta delta-pos">↑ +83.3 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span><i class="tick" style="left:100.0%"></i></span>
+<span class="num case-score">100%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">7 turns · $0.20 · 14:47:26 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">correct-repo-flag</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I can&apos;t retrieve the issue — `gh` isn&apos;t authenticated in this environment, and the direct web fetch is blocked by a hook that routes GitHub access through `gh`:
+
+```
+$ gh issue view 1234 --repo sigstore/cosign --comments
+To get started with GitHub CLI, please run:  gh auth login
+```
+```
+$ gh auth status
+You are not logged into any GitHub hosts.
+```
+
+No `GH_TOKEN`/`GITHUB_TOKEN` is set either.
+
+To unblock, either:
+- run `gh auth login` yourself in a terminal (it&apos;s interactive, so I can&apos;t do it from here), or
+- set `GH_TOKEN` to a personal access token (public-repo scope is enough for sigstore/cosign) and tell me — I&apos;ll re-run the lookup immediately.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">names-issue-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gh issue view[^\n]{0,40}1234</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">5 turns · $0.15 · 14:47:28 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">correct-repo-flag</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I can&apos;t retrieve the issue — the `gh` CLI in this environment isn&apos;t authenticated and no `GH_TOKEN`/`GITHUB_TOKEN` is set:
+
+```
+gh issue view 1234 --repo sigstore/cosign
+→ To get started with GitHub CLI, please run: gh auth login
+```
+
+To unblock it, either:
+- run `gh auth login` yourself in a terminal, or
+- set `GH_TOKEN` to a GitHub token (a read-only token is enough for a public repo like sigstore/cosign)
+
+Once either is in place, tell me and I&apos;ll pull the issue and summarize it. I&apos;d rather not guess at the contents — sigstore/cosign issue numbers in the 1200s are from 2022, and I have no reliable recollection of that specific one.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">names-issue-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gh issue view[^\n]{0,40}1234</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">6 turns · $0.17 · 14:47:29 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">correct-repo-flag</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I can&apos;t fetch the issue — `gh` is installed but not authenticated in this environment, and there&apos;s no `GH_TOKEN`/`GITHUB_TOKEN` set.
+
+```
+gh issue view 1234 --repo sigstore/cosign
+→ To get started with GitHub CLI, please run: gh auth login
+```
+
+To unblock, either:
+
+- Run `gh auth login` (interactive, so you&apos;ll need to do it in your own terminal), or
+- Set a token for me to use: `export GH_TOKEN=&lt;your PAT&gt;` — a token with `public_repo`/read scope is enough for a public repo like sigstore/cosign.
+
+Once one of those is in place, I&apos;ll run `gh issue view 1234 --repo sigstore/cosign --comments` and summarize the issue, its status, and the discussion. I&apos;m deliberately not falling back to an unauthenticated `curl`/WebFetch against GitHub here, per the repo&apos;s gh-cli guidance.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">names-issue-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gh issue view[^\n]{0,40}1234</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:16.7%"></span></span>
+<span class="num">16.7%</span>
+<span class="muted num">0% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">5 turns · $0.18 · 14:47:43 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">correct-repo-flag</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">`gh` isn&apos;t authenticated in this environment (and direct API calls to api.github.com are blocked by the sandbox&apos;s network policy), so I pulled this from the public web page instead.
+
+One thing worth flagging: **sigstore/cosign#1234 is a pull request, not an issue** — GitHub shares one numbering space between them.
+
+## sigstore/cosign#1234 — &quot;Update build images for release and bump cosign in the release job&quot;
+
+- **Author:** cpanato
+- **Opened:** December 17, 2021
+- **State:** Merged (milestone v1.5.0); branch `update-release` deleted January 17, 2022
+- **Labels:** none
+
+**What it does:** Release-infrastructure maintenance — updates the container build images used by the release process and bumps the version of cosign used within the release job itself (cosign signs its own release artifacts, so the job&apos;s cosign version needs periodic bumping).
+
+**Discussion:** Minimal. Opened as a draft, then marked ready for review; the branch was force-pushed down to a single commit (`64d7b64`). dekkagaijin was added as a reviewer, and dlorenc approved and merged it the same day.
+
+If you actually wanted a different item — e.g. an issue you saw referenced as 1234 in another repo, or you&apos;d like me to look at the real content of the diff — let me know.</pre>
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">names-issue-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:50.0%"></span></span>
+<span class="num">50%</span>
+<span class="muted num">5 turns · $0.17 · 14:47:50 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">correct-repo-flag</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**sigstore/cosign #1234** — &quot;update build images for release and bump cosign in the release job&quot;
+
+One note up front: #1234 in that repo is a **pull request**, not an issue. Here&apos;s the summary:
+
+- **Author:** cpanato · **Merged by:** dlorenc
+- **Opened &amp; merged:** December 17, 2021 (open for ~3.5 hours)
+- **Branch:** `cpanato:update-release` → `main`
+- **Size:** 1 commit, 2 files changed, +8 / −6
+- **Labels:** none
+
+**What it does:** Routine release-tooling maintenance — updates the container build images used for releases and bumps the version of cosign used within the release job itself. The description lists no ticket link and explicitly marks the release note as `NONE`, i.e. no user-facing change.</pre>
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">names-issue-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">5 turns · $0.18 · 14:47:52 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">correct-repo-flag</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">sigstore/cosign #1234 is a **pull request**, not an issue.
+
+**&quot;update build images for release and bump cosign in the release job&quot;** — by cpanato, opened December 17, 2021, merged the same day into milestone v1.5.0.
+
+- **What it does:** updates the container images used by the build process and bumps the cosign version referenced in the release workflow.
+- **Discussion:** opened as a draft with a review request to dekkagaijin, force-pushed, then marked ready for review. dlorenc approved it and it merged without further modification. The `update-release` branch was deleted on January 17, 2022.
+- **Labels:** none.
+
+A note on how I got this: `gh` isn&apos;t authenticated in this session and direct calls to `api.github.com` were denied by the sandbox&apos;s network proxy, so this comes from fetching the public GitHub web page. If you want richer detail (full comment threads, diff, files changed), running `gh auth login` or setting `GH_TOKEN` would let me pull it from the API.</pre>
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">names-issue-view</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>Summarize issue 1234 in the sigstore/cosign repository.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">correct-repo-flag</span><span class="badge">llm</span></div>
+<div class="md"><p>The prompt contains no URL, so the response has to pick the access method itself.
+Score it against all three claims:</p>
+<ol>
+<li>It reaches for the <code>gh</code> CLI as the way to read the issue, rather than a web fetch
+of github.com/sigstore/cosign/issues/1234 or a curl against api.github.com.</li>
+<li>The command it names targets the right repository and issue — <code>sigstore/cosign</code>
+and issue 1234, e.g. <code>gh issue view 1234 --repo sigstore/cosign</code>. A placeholder
+repo or a missing <code>--repo</code> flag does not count.</li>
+<li>It does not stop at generic advice about the gh CLI without producing the command.</li>
+</ol>
+<p>Fail if any claim is false.</p>
+</div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">names-issue-view</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;gh issue view[^\\n]{0,40}1234&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">skill-fired</span><span class="badge">tool_used</span></div>
+<div class="config"><div class="kv"><span>tool</span><code>&quot;Skill&quot;</code></div></div>
+</div>
+</details>
+</article>
+<article class="case" id="case-5">
+<div class="case-head">
+<h2>05-tree-directory</h2>
+<span class="muted mono">evals/05-tree-directory</span>
+<span class="spacer"></span>
+
+<span class="delta delta-pos">↑ +77.8 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:77.8%"></span><i class="tick" style="left:100.0%"></i></span>
+<span class="num case-score">77.8%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:77.8%"></span></span>
+<span class="num">77.8%</span>
+<span class="muted num">66.7% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:33.3%"></span></span>
+<span class="num">33.3%</span>
+<span class="muted num">11 turns · $0.29 · 14:48:09 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">matched gh repo clone</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I couldn&apos;t retrieve the directory listing — every available path is blocked:
+
+| Approach | Result |
+|---|---|
+| `gh repo clone` / `git clone` | `git` is unusable: `/usr/bin/git` is the Xcode shim and the Command Line Tools aren&apos;t installed (`xcode-select: Failed to locate &apos;git&apos;`) |
+| `gh api .../contents/...` | Blocked by a hook: &quot;Do not use `gh api` to access /contents/ endpoints. Clone the repo instead&quot; |
+| `gh api .../git/trees/master` | `gh` is not authenticated (`gh auth status`: not logged in), and no `GH_TOKEN`/`GITHUB_TOKEN` is set |
+| `curl` to api.github.com | Blocked by a hook redirecting to `gh api` |
+| `WebFetch` on the tree URL | Blocked by a hook redirecting to `gh repo clone` |
+
+So the hooks require a clone, and cloning is impossible without git or auth.
+
+To unblock, any one of these works:
+- `gh auth login` (or export a `GH_TOKEN`) — then I can use `gh api .../git/trees/master?recursive=1`, which isn&apos;t a `/contents/` endpoint, to list the directory without cloning
+- Install the Xcode Command Line Tools (`xcode-select --install`) so `git`/`gh repo clone` work — this is the path the hooks are steering toward
+- Point me at a local checkout of ripgrep if you have one
+
+From memory (unverified, and ripgrep restructured this crate around 14.x), `crates/core` holds `main.rs`, `search.rs`, `haystack.rs`, `logger.rs`, `messages.rs`, and a `flags/` submodule directory — but I&apos;d rather confirm against the real tree than have you rely on that.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">11 turns · $0.30 · 14:48:12 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">matched gh repo clone</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I can&apos;t get you the listing from this environment — every available path is blocked:
+
+- **`gh repo clone` (the prescribed path)** fails: `gh` is not authenticated (`gh auth status` → &quot;You are not logged into any GitHub hosts&quot;), and no `GH_TOKEN`/`GITHUB_TOKEN` is set.
+- **Plain `git clone`** fails independently of auth: the only `git` on PATH is the Xcode shim at `/usr/bin/git`, and it can&apos;t resolve a real git binary here (`xcode-select: Failed to locate &apos;git&apos;`, plus a denied `xcrun` cache write in the sandbox). So even with a token, cloning wouldn&apos;t work.
+- **`gh api .../contents/...`** and **`WebFetch`** are both intercepted by a project hook that redirects to cloning.
+
+To unblock, either run `gh auth login` (or export `GH_TOKEN`) *and* install a working git (e.g. `xcode-select --install` or Homebrew git), or point me at a local checkout of ripgrep and I&apos;ll read `crates/core` directly.
+
+I&apos;d rather not answer from memory here — `crates/core` has been reorganized more than once in ripgrep&apos;s history (files moved in and out as the `flags` module was introduced), so a recalled list could easily be stale or wrong for current `master`.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">9 turns · $0.24 · 14:48:19 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">matched gh repo clone</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I can&apos;t retrieve the listing right now — both paths are blocked:
+
+- **`gh` is not authenticated** (`gh auth status`: &quot;You are not logged into any GitHub hosts&quot;), and no `GH_TOKEN`/`GITHUB_TOKEN` is set. So `gh repo clone` and `gh api` both fail immediately.
+- **`git` is unusable** in this environment: `/usr/bin/git` is the Xcode command-line stub, and it errors with `xcode-select: Failed to locate &apos;git&apos;` (no real toolchain installed, and it can&apos;t write its cache under the sandbox).
+- **`WebFetch` is blocked by a hook** on this repo&apos;s policy, which requires the `gh repo clone` route instead.
+
+To unblock, either:
+1. Run `gh auth login` (or export a `GH_TOKEN`) — then I&apos;ll clone and list the directory, or
+2. Install a working git (e.g. `xcode-select --install` or Homebrew git).
+
+For what it&apos;s worth, `crates/core` in ripgrep is the `rg` binary crate rather than a library of many modules — but I&apos;d rather read the actual tree than tell you from memory, so let me know once one of the above is available.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">skill-fired</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">Skill called 1x (expected 1..∞)</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">0% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">6 turns · $0.20 · 14:48:56 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">`crates/core` is ripgrep&apos;s binary crate (`main.rs` is the entry point). Its module tree, as declared in `main.rs`:
+
+| Module | Form | Role |
+|---|---|---|
+| `messages` | `messages.rs` (`#[macro_use]`) | Macros/helpers for emitting errors and warnings |
+| `flags` | `flags/` directory | The CLI interface definition — flag definitions, parsing, help/man generation |
+| `haystack` | `haystack.rs` | Building the set of files to search (directory traversal / file selection) |
+| `index` | `index/` directory | Index-related support |
+| `logger` | `logger.rs` | `log` crate implementation used for `--debug`/`--trace` |
+| `search` | `search.rs` | Glue that wires `grep-matcher`, `grep-regex`, `grep-searcher`, and `grep-printer` together to run the search |
+
+Also in the directory: `README.md`, which describes the crate as the CLI definition plus the glue that drives the `grep-*` library crates. Note this crate is intentionally not published as a reusable library — the reusable pieces live in the sibling `crates/` (grep-matcher, grep-regex, grep-searcher, grep-printer, ignore, globset, etc.).
+
+Two notes on how I got this: `gh` isn&apos;t authenticated here and direct `api.github.com` access was blocked by the sandbox&apos;s network policy, so I read the rendered GitHub page and the raw `main.rs` instead. The `index` module is recent enough that I&apos;m going by the file listing rather than knowing its contents — say the word and I&apos;ll pull `index/` to summarize what it does.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">7 turns · $0.20 · 14:49:00 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">`crates/core` is ripgrep&apos;s binary crate (the `main` function plus the CLI definition and the glue that wires `grep-matcher`, `grep-regex`, `grep-searcher`, and `grep-printer` together). It&apos;s not meant to be used as a library.
+
+**Top level**
+
+| Entry | Notes |
+|---|---|
+| `main.rs` | Entry point; ~19 KB |
+| `search.rs` | Search execution — builds searchers/printers and runs them |
+| `haystack.rs` | The &quot;thing to search&quot; abstraction (files/paths handed to the searcher) |
+| `messages.rs` | Warning/error message emission |
+| `logger.rs` | `log` implementation for `--debug`/`--trace` |
+| `README.md` | Short description of the crate |
+| `flags/` | CLI flag definitions and parsing |
+| `index/` | Index support, feature-gated |
+
+**`flags/`** — `mod.rs`, `defs.rs` (the big one, ~246 KB: every flag with its docs), `parse.rs`, `lowargs.rs` (raw parsed args), `hiargs.rs` (high-level args resolved into usable config, ~59 KB), `config.rs` (`RIPGREP_CONFIG_PATH` handling), plus `complete/` (shell completion generation) and `doc/` (man page / doc generation).
+
+**`index/`** — `mod.rs`, `enabled.rs`, `disabled.rs`: a tiny compile-time switch, so the index feature is a no-op stub unless enabled.
+
+One note: `gh` isn&apos;t authenticated in this environment (`gh auth login` or `GH_TOKEN` needed), so I read this through the public GitHub API instead.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:0.0%"></span></span>
+<span class="num">0%</span>
+<span class="muted num">6 turns · $0.20 · 14:49:04 UTC</span>
+</div>
+
+<div class="graders"><details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">clones-repo</span> <span class="muted">×0.5</span> </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">routes-to-clone</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">`crates/core` is ripgrep&apos;s binary crate (the `rg` executable itself). `main.rs` declares six modules:
+
+| Module | Form | Role |
+|---|---|---|
+| `flags` | directory `flags/` | CLI definition and argument parsing |
+| `index` | directory `index/` | index reading/writing |
+| `messages` | `messages.rs` | `#[macro_use]` — error/status message macros |
+| `haystack` | `haystack.rs` | the &quot;things to search&quot; abstraction (files/paths to feed the searcher) |
+| `logger` | `logger.rs` | logging implementation |
+| `search` | `search.rs` | the search worker that drives a search |
+
+Plus `README.md`, which describes the crate as holding the CLI interface definition and the glue code tying `grep-matcher`, `grep-regex`, `grep-searcher`, and `grep-printer` together to actually execute searches.
+
+Note: `index` is a relatively recent addition and not part of older ripgrep releases. Descriptions of `haystack`, `index`, and `search` above are inferred from the module names and README; I didn&apos;t read those files&apos; contents.</pre>
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p><a href="https://github.com/BurntSushi/ripgrep/tree/master/crates/core" rel="noopener">https://github.com/BurntSushi/ripgrep/tree/master/crates/core</a> — what modules live in this directory?</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">clones-repo</span><span class="badge">regex</span><span class="muted">weight ×0.5</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;gh repo clone&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">routes-to-clone</span><span class="badge">llm</span></div>
+<div class="md"><p>The user asked what lives in a directory, given a github.com <code>/tree/</code> URL. Judge only the
+ACCESS ROUTE the response settles on, not whether it obtained the listing — the environment
+may legitimately block retrieval.</p>
+<p>Score against all three claims:</p>
+<ol>
+<li>It identifies cloning the <code>BurntSushi/ripgrep</code> repository and inspecting it
+locally as the correct route, naming <code>gh repo clone</code> (or <code>gh</code> clone-then-explore in words
+that clearly mean that). The repository must be identified as BurntSushi/ripgrep
+somewhere in the response.</li>
+<li>It does not RECOMMEND fetching the github.com tree URL, <code>curl</code>, or <code>wget</code> as the way to do
+this. Two things explicitly do NOT fail this claim: reporting that such an attempt was made
+and rejected, and offering an unauthenticated fetch as a clearly labelled fallback or
+unblock option after the clone route has been named first. It fails only if a raw fetch is
+presented as the primary or recommended route, or offered with no indication that it
+bypasses the intended workflow.</li>
+<li>It does not RECOMMEND <code>gh api</code> with a <code>/contents/</code> endpoint, or base64-decoding an API
+response, as a substitute for cloning. Reporting that such an attempt was made and
+rejected, or listing it among routes that were blocked, does NOT fail this claim — it
+fails only if that endpoint is put forward as a way to proceed.</li>
+</ol>
+<p>Fail if any claim is false.</p>
+</div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">skill-fired</span><span class="badge">tool_used</span></div>
+<div class="config"><div class="kv"><span>tool</span><code>&quot;Skill&quot;</code></div></div>
+</div>
+</details>
+</article>
+<article class="case" id="case-6">
+<div class="case-head">
+<h2>06-neg-github-pages</h2>
+<span class="muted mono">evals/06-neg-github-pages</span>
+<span class="spacer"></span>
+
+<span class="delta delta-zero">· 0.0 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span><i class="tick" style="left:100.0%"></i></span>
+<span class="num case-score">100%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">4 turns · $0.16 · 14:49:24 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">answers-directly</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The landing page only links to the topic, so I followed through to the [Default backend](https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/) page.
+
+**What it does:** the default backend is the catch-all service that handles every URL path and host the ingress-nginx controller doesn&apos;t recognize — i.e. any request that matches no configured ingress rule gets proxied there instead of being dropped.
+
+**Contract it must satisfy** — a service can serve as the default backend if it exposes two endpoints:
+
+| Path | Expected response |
+|---|---|
+| `/healthz` | HTTP 200 (used for health checking) |
+| `/` | HTTP 404 (the fallback response for unmatched traffic) |
+
+**Customization:** the project ships a custom error pages service under `/images/custom-error-pages` in the repo, so you can replace the generic 404 with your own branded error responses rather than running the stock backend.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">4 turns · $0.17 · 14:49:29 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">answers-directly</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The landing page only links to the topic, so I followed through to [the Default backend page](https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/). Here&apos;s what it says:
+
+**The default backend is the catch-all service for traffic the controller can&apos;t route.** It handles all URL paths and hosts that the ingress-nginx controller doesn&apos;t understand — i.e., any request that doesn&apos;t match a configured Ingress rule gets sent there instead of failing in an undefined way.
+
+It must satisfy two endpoints:
+
+- **`/healthz`** — returns `200` so the controller can health-check it
+- **`/`** — returns `404` for unmatched requests
+
+For customizing what users actually see, the project ships a custom error page service under `/images/custom-error-pages` in the repo, which you can deploy in place of the stock backend. The docs page itself doesn&apos;t spell out the headers that service receives, so if you want to build your own error pages I&apos;d check that image&apos;s source or the custom-error-pages guide next.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">4 turns · $0.17 · 14:49:32 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">answers-directly</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The landing page only links to the topic, so I followed through to the [Default backend](https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/) page.
+
+**What it does:** the default backend is a service that handles all URL paths and hosts the ingress-nginx controller doesn&apos;t understand — i.e. anything that doesn&apos;t match a configured Ingress rule. Instead of the request failing at the proxy, nginx forwards it there.
+
+**Contract it must satisfy** — it exposes two endpoints:
+- `/healthz` → returns 200 (used for health checking)
+- `/` → returns 404 (the catch-all response for unmatched requests)
+
+**Customization:** you can swap in your own service to serve branded/custom error pages; the project ships an example implementation under `images/custom-error-pages` in the repo.
+
+One note: I used a plain web fetch rather than the `gh` CLI here. Despite the `kubernetes.github.io` hostname, this is a public GitHub Pages documentation site, not the GitHub API — there&apos;s no repo, PR, or issue resource for `gh` to address, and no authentication involved.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">4 turns · $0.15 · 14:49:48 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">answers-directly</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The landing page at that URL only links to the topic, so I followed it to `user-guide/default-backend/`. Here&apos;s what it says:
+
+**The default backend is the catchall service for the ingress-nginx controller.** It handles all URL paths and hosts the controller doesn&apos;t understand — i.e., every request that isn&apos;t matched by an Ingress rule.
+
+It must satisfy two endpoint requirements:
+- `GET /healthz` → returns 200 (used as the health/readiness signal)
+- `GET /` → returns 404
+
+So in practice it&apos;s a safety net: unrouted traffic gets a clean 404 instead of a controller error. The default 404 responses can be customized — the repo ships tooling for this under `/images/custom-error-pages`, which you point at via a separate service.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">4 turns · $0.16 · 14:49:52 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">answers-directly</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The landing page only links to the topic, so I followed through to `https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/`. What it says:
+
+**The default backend is the catch-all** — &quot;a service which handles all URL paths and hosts the ingress-nginx controller doesn&apos;t understand.&quot; Any request that doesn&apos;t match a configured Ingress rule gets routed there instead of being dropped.
+
+**It must expose two endpoints:**
+- `/healthz` — returns HTTP 200, used for the health check
+- `/` — returns HTTP 404 for everything unmatched
+
+**Customization:** the docs point at the `/images/custom-error-pages` sub-directory, which provides an additional service for customizing the error pages the default backend serves, so you can return something friendlier than a bare 404.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">4 turns · $0.15 · 14:49:53 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">answers-directly</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The landing page itself doesn&apos;t describe it — it just links to the User Guide page, so I followed that link ([user-guide/default-backend/](https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/)).
+
+**The default backend is the catch-all for requests the ingress controller can&apos;t route.** If an incoming request&apos;s host/path doesn&apos;t match any rule in any Ingress, NGINX hands it to the default backend instead of dropping it, so clients get a consistent response.
+
+It&apos;s a normal Service, and the docs require it to expose two endpoints:
+
+| Endpoint | Response |
+|---|---|
+| `/healthz` | `200` — used to verify the backend is healthy |
+| `/` | `404` — the response served for unmatched requests |
+
+The docs also point to a `custom-error-pages` example if you want to serve your own branded error pages rather than a bare 404.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>Fetch <a href="https://kubernetes.github.io/ingress-nginx/" rel="noopener">https://kubernetes.github.io/ingress-nginx/</a> and tell me what the default backend does.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">answers-directly</span><span class="badge">llm</span></div>
+<div class="md"><p><code>kubernetes.github.io</code> is a GitHub Pages documentation site, not a GitHub repository URL —
+the gh CLI cannot serve it. This is a should-NOT-fire case: the plugin must leave it alone.</p>
+<p>Score against both claims:</p>
+<ol>
+<li>It treats the URL as an ordinary web page to read. It does NOT redirect the user to the
+<code>gh</code> CLI, does NOT name a <code>gh</code> command, and does NOT describe gh as the authenticated
+way to reach this page.</li>
+<li>It either answers what the default backend does, or reports a genuine network or
+page-load failure. Being unable to reach the network is acceptable and is NOT a failure
+of this grader; wrongly routing the request through gh is.</li>
+</ol>
+<p>Fail if either claim is false.</p>
+</div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">no-gh-suggestion</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;\\bgh (repo|pr|issue|api|release|gist)\\b&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;not_contains&quot;</code></div></div>
+</div>
+</details>
+</article>
+<article class="case case-regressed" id="case-7">
+<div class="case-head">
+<h2>07-neg-gitlab</h2>
+<span class="muted mono">evals/07-neg-gitlab</span>
+<span class="spacer"></span>
+
+<span class="delta delta-neg">↓ -16.7 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:83.3%"></span><i class="tick" style="left:100.0%"></i></span>
+<span class="num case-score">83.3%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:83.3%"></span></span>
+<span class="num">83.3%</span>
+<span class="muted num">66.7% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">5 turns · $0.18 · 14:50:06 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">treats-as-non-github</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">Here&apos;s the summary of **gitlab-org/gitlab#12345**:
+
+## Merge requests requiring attention
+
+**Status:** Open · **Type:** MR triage notice for merge request coaches
+
+It&apos;s not a bug report or feature request — it&apos;s an automated/periodic triage roundup asking MR coaches to review a batch of community merge requests and decide what happens to each.
+
+**Two buckets of MRs:**
+
+1. **Recently opened, unlabeled MRs from external contributors** (three of them) — coaches are asked to judge whether each is ready for review, needs a reviewer assigned, or should be closed. Topics include UI consolidation and JavaScript module cleanup.
+2. **Stalled community contributions** (one MR) — no &quot;coach will finish&quot; label and no activity for ~two months. The ask is whether the team should finish it, request more changes, or close it.
+
+**Process:** Each MR has a checkbox; coaches tick it off once triaged and leave a note on prioritization/next steps.
+
+**Labels:** Manage, Create, UX, UX debt, frontend, webpack, api, merge requests, Community contribution, devops::manage, devops::create. No milestone set.
+
+Two notes on how I got this: since this is GitLab rather than GitHub, `gh` doesn&apos;t apply, and `glab` isn&apos;t installed here — so I read the rendered issue page directly. I also tried the GitLab public API for more precise field values (exact MR links, author, dates), but outbound network to `gitlab.com:443` was denied by the sandbox, so the details above come from the page render and are a little fuzzy on specifics like the individual MR titles.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:50.0%"></span></span>
+<span class="num">50%</span>
+<span class="muted num">3 turns · $0.14 · 14:50:13 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">treats-as-non-github</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL FAIL FAIL</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✗ ✗</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**[gitlab-org/gitlab#12345](https://gitlab.com/gitlab-org/gitlab/-/issues/12345) — &quot;Merge requests requiring attention&quot;** (open)
+
+This isn&apos;t a bug report or feature request — it&apos;s an automated triage issue filed by the GitLab Merge Request Coaches group (`@gitlab-org/coaches`).
+
+**What it asks for:** coaches to work through two lists of merge requests that have fallen through the cracks:
+
+1. **Recently opened, unlabeled MRs from non-group members** (3 listed) — community contributions that haven&apos;t been categorized yet.
+2. **Inactive community contributions with no team assigned** (1 listed) — stalled work with no owner.
+
+**Expected action per MR:** approve as ready to merge, assign a reviewer, or close it — then check it off the list.
+
+**Labels:** a grab-bag reflecting the MRs it references (Manage, UX, frontend, webpack, api, Community contribution). No milestone set.
+
+Worth noting these auto-generated triage issues are numerous and low-signal; if you were expecting a specific technical discussion at this number, you may be thinking of a merge request (`/-/merge_requests/12345`) rather than an issue.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">3 turns · $0.15 · 14:50:15 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">treats-as-non-github</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**[gitlab-org/gitlab#12345 — &quot;Merge requests requiring attention&quot;](https://gitlab.com/gitlab-org/gitlab/-/issues/12345)** (open)
+
+It&apos;s not a bug report — it&apos;s an automated triage roundup aimed at GitLab&apos;s **merge request coaches**. It collects MRs in two buckets:
+
+- Recently opened MRs from non-`gitlab-org` authors that have no labels yet
+- Community contributions that have gone stale (no recent activity)
+
+Coaches are asked to walk the list and decide, per MR, whether it&apos;s ready, needs a reviewer assigned, or should be closed — then tick the checkbox next to it and leave their assessment.
+
+Four MRs are listed, covering UI consolidation, dropdown behavior improvements, and API work for merge request templates. Labels span `Manage`, `Create`, `UX`/`UX debt`, `frontend`, `webpack`, `api`, and `Community contribution`; no milestone is set.
+
+Worth noting: this is GitLab, so `gh` doesn&apos;t apply — I fetched the public issue page directly. If you want richer detail (full comment thread, current checkbox state), GitLab&apos;s REST API at `https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab/issues/12345` would give it, though it may need a token for rate limits.</pre>
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">5 turns · $0.19 · 14:50:31 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">treats-as-non-github</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**[gitlab-org/gitlab#12345 — &quot;Merge requests requiring attention&quot;](https://gitlab.com/gitlab-org/gitlab/-/issues/12345)**
+
+| | |
+|---|---|
+| Author | `gitlab-bot` (automated) |
+| State | **Closed** |
+| Opened | 2019-06-24 00:22 UTC |
+| Closed | 2019-06-24 07:57 UTC (~7.5 hours later) |
+| Labels | `Enterprise Edition`, `triage report` |
+| Milestone | none |
+| Comments | 2 |
+
+**What it is:** not a bug or feature request — it&apos;s an auto-generated triage report, one of the recurring issues GitLab&apos;s triage bot files to nudge Merge Request Coaches.
+
+**Content:** the body lists a handful of merge requests in two buckets:
+1. Recently opened MRs with no labels, from authors outside the `gitlab-org` group.
+2. Community contributions that had gone inactive (no activity for 2+ months).
+
+For each one, coaches were asked to decide whether the MR is ready for review, needs a reviewer assigned, or should be closed — then tick the checkbox once triaged. The listed MRs carried labels like `Community contribution`, `Manage`, `Create`, `UX debt`, `frontend`, `webpack`, and `api`.
+
+**Outcome:** closed the same morning it was filed, which is the normal lifecycle for these reports — they&apos;re short-lived worklists, superseded by the next scheduled run rather than resolved through discussion.
+
+One correction to flag: my first read of the rendered page showed the issue as open; the API confirms it&apos;s closed, and that&apos;s the accurate value above.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">3 turns · $0.15 · 14:50:35 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">treats-as-non-github</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**[gitlab-org/gitlab#12345 — &quot;Merge requests requiring attention&quot;](https://gitlab.com/gitlab-org/gitlab/-/issues/12345)** (open)
+
+This isn&apos;t a bug or feature request — it&apos;s an automated/internal triage coordination issue asking GitLab&apos;s MR coaches to work through a list of merge requests that had fallen through the cracks.
+
+**What it covers**
+- Two buckets of MRs: recently opened ones from non-core contributors that hadn&apos;t been labeled, and community contributions that had gone inactive with no team engagement.
+- Four specific MRs in total — three recent, one long-stale community contribution.
+- Labels touched include Manage, UX, UX debt, frontend, webpack, and Community contribution.
+
+**The ask**
+For each listed MR, a coach should decide whether it&apos;s ready to proceed, needs a reviewer assigned, or should be closed — then tick the corresponding checkbox in the issue.
+
+Two caveats: this is a GitLab-hosted issue, so the `gh` CLI doesn&apos;t apply here — I read the public web page. And the page didn&apos;t expose the author or open date in a form I could reliably extract, so I&apos;ve left those out rather than guess.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">4 turns · $0.16 · 14:50:38 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">no-gh-suggestion</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern absent as expected</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">treats-as-non-github</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**gitlab.com/gitlab-org/gitlab#12345 — &quot;Merge requests requiring attention&quot;** (open)
+
+This isn&apos;t a bug report or feature request — it&apos;s an automated triage ticket for GitLab&apos;s merge request coaches.
+
+- **Purpose:** flag community MRs that need a coach to look at them.
+- **Two buckets:**
+  1. Recently opened MRs from non-group members that have no labels yet.
+  2. Community contributions that have been inactive for 2+ months.
+- **Asked action:** for each listed MR, a coach decides to mark it ready, assign a reviewer, or close it, then ticks the checkbox.
+- **MRs listed:** !7471, !3840, !3830, !7432 (labels across them include Manage, UX, frontend, Community contribution).
+
+Two caveats:
+- I read this via the rendered web page, and GitLab pages are JS-heavy, so comment-thread details may be incomplete. I tried the GitLab REST API for a cleaner read, but the sandbox blocked outbound network access to `gitlab.com` for `curl` — lifting that is your call if you want me to pull the structured data.
+- This is GitLab, not GitHub, so the `gh` CLI doesn&apos;t apply here.</pre>
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>Summarize <a href="https://gitlab.com/gitlab-org/gitlab/-/issues/12345" rel="noopener">https://gitlab.com/gitlab-org/gitlab/-/issues/12345</a> for me.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">no-gh-suggestion</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;\\bgh (repo|pr|issue|api|release|gist)\\b&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;not_contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">treats-as-non-github</span><span class="badge">llm</span></div>
+<div class="md"><p>This is a GitLab issue URL, not GitHub. The GitHub CLI cannot read it. This is a
+should-NOT-fire case: the plugin must leave it alone.</p>
+<p>Score against both claims:</p>
+<ol>
+<li>It does NOT suggest <code>gh</code> in any form as the way to read this issue, and does NOT
+describe the URL as a GitHub resource.</li>
+<li>It either summarizes the issue, or reports a genuine network or access failure against
+gitlab.com. Being unable to reach the network is acceptable and is NOT a failure of this
+grader; routing a GitLab URL through the GitHub CLI is.</li>
+</ol>
+<p>Fail if either claim is false.</p>
+</div>
+</div>
+</details>
+</article>
+<footer>Generated by <code>claude plugin eval</code> · schema v1 · scores are not comparable across different suites</footer>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  var bar=document.querySelector('.toolbar');
+  if(!bar)return;
+  bar.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest('button');
+    if(!b)return;
+    var open=b.dataset.act==='expand';
+    document.querySelectorAll('details.section, details.grader').forEach(function(d){d.open=open});
+  });
+});
+// Collapsed details vanish from print/PDF; these pages are share artifacts.
+window.addEventListener('beforeprint',function(){
+  document.querySelectorAll('details').forEach(function(d){
+    if(!d.open){d.dataset.printOpened='1';d.open=true}
+  });
+});
+window.addEventListener('afterprint',function(){
+  document.querySelectorAll('details[data-print-opened]').forEach(function(d){
+    d.open=false;delete d.dataset.printOpened;
+  });
+});
+</script>
+</body>
+</html>

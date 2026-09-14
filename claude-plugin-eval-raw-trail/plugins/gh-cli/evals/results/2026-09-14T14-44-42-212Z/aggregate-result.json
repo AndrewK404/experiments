@@ -1,0 +1,2018 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.270",
+  "startedAt": "2026-09-14T14:44:42.212Z",
+  "durationSeconds": 385,
+  "costUsd": 7.8273625,
+  "partial": false,
+  "suite": {
+    "root": "/Users/andrewkuncevich/vs_code_projects/experiments/claude-eval-plugin-first-trail/skills/plugins/gh-cli",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "gh-cli",
+        "version": "1.6.0",
+        "path": "/Users/andrewkuncevich/vs_code_projects/experiments/claude-eval-plugin-first-trail/skills/plugins/gh-cli"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "01-pr-url-summary",
+      "dir": "evals/01-pr-url-summary",
+      "source": "prose",
+      "promptMarkdown": "What's the status of https://github.com/cli/cli/pull/9876? Give me a one-line summary of what it changes.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 300,
+      "maxTurns": 15,
+      "graders": [
+        {
+          "name": "concrete-command",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Score this response against all three claims:\n\n1. It names a single, runnable `gh` command for pull request 9876 in the `cli/cli`\n   repository — either `gh pr view 9876 --repo cli/cli` or `gh pr view` against the\n   full PR URL. A command with a placeholder like `owner/repo` instead of `cli/cli`\n   does not count.\n2. It does NOT stop at generic advice such as \"use the gh CLI\" or \"the gh CLI is\n   authenticated\" without producing the actual command and its arguments.\n3. It does NOT suggest `curl`, `wget`, or a web fetch of the PR URL as the way to\n   get the answer.\n\nFail if any claim is false.",
+          "config": {
+            "criteria": "Score this response against all three claims:\n\n1. It names a single, runnable `gh` command for pull request 9876 in the `cli/cli`\n   repository — either `gh pr view 9876 --repo cli/cli` or `gh pr view` against the\n   full PR URL. A command with a placeholder like `owner/repo` instead of `cli/cli`\n   does not count.\n2. It does NOT stop at generic advice such as \"use the gh CLI\" or \"the gh CLI is\n   authenticated\" without producing the actual command and its arguments.\n3. It does NOT suggest `curl`, `wget`, or a web fetch of the PR URL as the way to\n   get the answer.\n\nFail if any claim is false.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "names-pr-view",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "gh pr view[^\\n]{0,40}9876",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.202266,
+            "judgeCostUsd": 0.005348000000000002,
+            "durationSeconds": 29,
+            "startedAt": "2026-09-14T14:44:42.245Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-lc9AQF/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "concrete-command",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I can't retrieve it — the lookup is blocked at both ends:\n\n- `gh pr view 9876 --repo cli/cli` fails: `gh` is not logged in on this machine, and no `GH_TOKEN`/`GITHUB_TOKEN` is set.\n- `WebFetch` on the PR URL is blocked by a hook that requires the `gh` CLI for GitHub URLs.\n\nTo unblock, either of these works:\n\n```sh\ngh auth login          # interactive, needs a terminal\n# or\nexport GH_TOKEN=<your token>\n```\n\nOnce one is in place, `gh pr view 9876 --repo cli/cli --json title,state,isDraft,author,mergedAt,additions,deletions,changedFiles,body` gives everything needed for the summary. Say the word and I'll run it — I won't guess at the PR's contents from memory."
+              },
+              {
+                "name": "names-pr-view",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched gh pr view[^\\n]{0,40}9876",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.18213000000000001,
+            "judgeCostUsd": 0.005468,
+            "durationSeconds": 25,
+            "startedAt": "2026-09-14T14:44:42.245Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-kQzvjU/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "concrete-command",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I can't retrieve it — `gh` isn't authenticated in this environment, and the direct HTTP fallback is blocked by your gh-cli policy hook.\n\nWhat I hit:\n- `gh pr view 9876 --repo cli/cli` → *\"To get started with GitHub CLI, please run: gh auth login\"*\n- `gh auth status` → *\"You are not logged into any GitHub hosts\"*; no `GH_TOKEN`/`GITHUB_TOKEN` in the environment\n- `curl https://api.github.com/repos/cli/cli/pulls/9876` → blocked by the hook: *\"Use `gh pr list --repo cli/cli` instead.\"*\n\nTo unblock, either run `gh auth login` yourself, or set `GH_TOKEN` in the environment (a token with public-repo read is enough for `cli/cli`). Once either is in place, I'll pull the status and give you the one-line summary."
+              },
+              {
+                "name": "names-pr-view",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched gh pr view[^\\n]{0,40}9876",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0.5,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.187566,
+            "judgeCostUsd": 0.007038,
+            "durationSeconds": 26,
+            "startedAt": "2026-09-14T14:44:42.245Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-49o6UV/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "concrete-command",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "I can't fetch it yet — `gh` isn't authenticated in this environment:\n\n```\ngh auth status → You are not logged into any GitHub hosts.\n```\n\nBoth `gh pr view 9876 --repo cli/cli` and `gh api repos/cli/cli/pulls/9876` fail on that, and there's no `GH_TOKEN`/`GITHUB_TOKEN` set. Your gh-cli skill directs GitHub lookups through authenticated `gh` rather than `curl`/`WebFetch`, so I stopped rather than routing around it.\n\nTo unblock, either:\n- run `gh auth login` yourself (it needs an interactive browser/device flow, which I can't drive from here), or\n- export a token: `export GH_TOKEN=<your_pat>` — a classic PAT with `public_repo` is enough for a public repo like cli/cli.\n\nSay the word once that's done and I'll pull the state, title, and diffstat and give you the one-liner. If you'd rather I just fetch the public PR page unauthenticated this once, tell me and I'll do that instead."
+              },
+              {
+                "name": "names-pr-view",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched gh pr view[^\\n]{0,40}9876",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.180686,
+            "judgeCostUsd": 0.0057020000000000005,
+            "durationSeconds": 23,
+            "startedAt": "2026-09-14T14:45:06.813Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-HMwtZv/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "concrete-command",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**Status: Merged** (Nov 5, 2024, into `cli/cli:trunk`, by @akx).\n\n**What it changes:** Corrects `gh run delete` messaging to say \"workflow run\" instead of \"workflow\" — since it deletes a run, not the workflow YAML file — with acceptance tests updated to match.\n\nNote: `gh` isn't authenticated here and direct api.github.com access is blocked by the sandbox's network policy, so I read this from the public PR page via WebFetch rather than the API. If you want richer detail (exact diff, review/check status), you'd need to run `gh auth login` or set `GH_TOKEN`."
+              },
+              {
+                "name": "names-pr-view",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.18170399999999998,
+            "judgeCostUsd": 0.006861999999999993,
+            "durationSeconds": 24,
+            "startedAt": "2026-09-14T14:45:08.499Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-lMbkNv/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "concrete-command",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**Status: merged** (Nov 5, 2024) — [cli/cli#9876](https://github.com/cli/cli/pull/9876) by akx, \"Fix verbiage for deleting workflow runs.\"\n\nOne-line summary: Corrects `gh run delete` messaging to say \"workflow run\" instead of \"workflow,\" so the CLI doesn't imply it's deleting the workflow definition rather than a single run (tests updated to match).\n\nNote: `gh` isn't authenticated here and direct api.github.com access is blocked by the sandbox, so this came from fetching the public PR page — the file-level diff wasn't included in what I could retrieve."
+              },
+              {
+                "name": "names-pr-view",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.16062300000000004,
+            "judgeCostUsd": 0.007967999999999998,
+            "durationSeconds": 19,
+            "startedAt": "2026-09-14T14:45:10.993Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-Zgr9GV/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "concrete-command",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**Status:** Merged on Nov 5, 2024 (by akx, `delete-workflow-run-copy` → `trunk`; 3 files, +4/−4).\n\n**What it changes:** Corrects `gh run delete` prompt/confirmation wording to say it deletes a *workflow run*, not the *workflow* itself.\n\nNote: `gh` isn't authenticated in this session (`gh auth login` or `GH_TOKEN` needed), so I read the public GitHub API instead — fine here, but private repos or review/CI details would require auth."
+              },
+              {
+                "name": "names-pr-view",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.8333333333333334,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.8333333333333334
+      }
+    },
+    {
+      "name": "02-raw-file-content",
+      "dir": "evals/02-raw-file-content",
+      "source": "prose",
+      "promptMarkdown": "Pull the contents of https://raw.githubusercontent.com/astral-sh/uv/main/README.md and tell me what the project does.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 25,
+      "graders": [
+        {
+          "name": "clones-repo",
+          "type": "regex",
+          "weight": 0.5,
+          "config": {
+            "target": "last_message",
+            "pattern": "gh repo clone",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "routes-to-clone",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "The user asked for a file's contents via a raw.githubusercontent.com URL. Judge only the\nACCESS ROUTE the response settles on, not whether it obtained the file — the environment\nmay legitimately block retrieval.\n\nScore against all three claims:\n\n1. It identifies cloning the `astral-sh/uv` repository and reading the file locally as the\n   correct route, naming `gh repo clone` (or `gh` clone-then-read in words that clearly\n   mean that). The repository must be identified as astral-sh/uv somewhere in the response.\n2. It does not RECOMMEND fetching the raw.githubusercontent.com URL, `curl`, or `wget` as\n   the way to do this. Two things explicitly do NOT fail this claim: reporting that such an\n   attempt was made and rejected, and offering an unauthenticated fetch as a clearly\n   labelled fallback or unblock option after the clone route has been named first. It fails\n   only if a raw fetch is presented as the primary or recommended route, or offered with no\n   indication that it bypasses the intended workflow.\n3. It does not RECOMMEND `gh api` with a `/contents/` endpoint, or base64-decoding an API\n   response, as a substitute for cloning. Reporting that such an attempt was made and\n   rejected, or listing it among routes that were blocked, does NOT fail this claim — it\n   fails only if that endpoint is put forward as a way to proceed.\n\nFail if any claim is false.",
+          "config": {
+            "criteria": "The user asked for a file's contents via a raw.githubusercontent.com URL. Judge only the\nACCESS ROUTE the response settles on, not whether it obtained the file — the environment\nmay legitimately block retrieval.\n\nScore against all three claims:\n\n1. It identifies cloning the `astral-sh/uv` repository and reading the file locally as the\n   correct route, naming `gh repo clone` (or `gh` clone-then-read in words that clearly\n   mean that). The repository must be identified as astral-sh/uv somewhere in the response.\n2. It does not RECOMMEND fetching the raw.githubusercontent.com URL, `curl`, or `wget` as\n   the way to do this. Two things explicitly do NOT fail this claim: reporting that such an\n   attempt was made and rejected, and offering an unauthenticated fetch as a clearly\n   labelled fallback or unblock option after the clone route has been named first. It fails\n   only if a raw fetch is presented as the primary or recommended route, or offered with no\n   indication that it bypasses the intended workflow.\n3. It does not RECOMMEND `gh api` with a `/contents/` endpoint, or base64-decoding an API\n   response, as a substitute for cloning. Reporting that such an attempt was made and\n   rejected, or listing it among routes that were blocked, does NOT fail this claim — it\n   fails only if that endpoint is put forward as a way to proceed.\n\nFail if any claim is false.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 14,
+            "costUsd": 0.37375349999999996,
+            "judgeCostUsd": 0.010766000000000005,
+            "durationSeconds": 63,
+            "startedAt": "2026-09-14T14:45:29.597Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-Iozwr7/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": true,
+                "weight": 0.5,
+                "explanation": "matched gh repo clone",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I couldn't retrieve the file. Every available path is blocked in this session:\n\n| Path | Result |\n|---|---|\n| `WebFetch` on the raw URL | Blocked by a hook that requires `gh repo clone` instead |\n| `curl` on the raw URL | Blocked by the same hook |\n| `gh repo clone` / `gh api` | `gh` is not authenticated (`gh auth status`: \"not logged into any GitHub hosts\") |\n| `git clone https://github.com/astral-sh/uv.git` | Sandbox proxy denied egress: `deny network-outbound github.com:443 (user denied)`, surfacing as `CONNECT tunnel failed, response 403` |\n\nTwo side notes from the attempts: `/usr/bin/git` is broken under this sandbox (the `xcrun` shim can't write its cache to the system temp dir), though `/Library/Developer/CommandLineTools/usr/bin/git` works directly — that wasn't the blocker in the end, the network policy was.\n\nTo unblock, one of these is needed — all are your call:\n- Authenticate gh (`gh auth login`, or set `GH_TOKEN`) **and** allow `github.com:443` through the proxy, which satisfies the hook's required workflow.\n- Or allow `raw.githubusercontent.com` and relax the hook so a direct fetch is permitted.\n\nI'd rather not describe what uv does from memory when you asked me to read the current README — the point of pulling `main` is getting today's contents, and I can't verify them right now."
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 10,
+            "costUsd": 0.264943,
+            "judgeCostUsd": 0.006258000000000003,
+            "durationSeconds": 40,
+            "startedAt": "2026-09-14T14:45:30.253Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-apMiG9/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": true,
+                "weight": 0.5,
+                "explanation": "matched gh repo clone",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "I couldn't retrieve the file — every available path is blocked in this environment:\n\n1. **`WebFetch` on the raw URL** — blocked by a hook, which requires GitHub content be read from a clone instead.\n2. **`gh repo clone` / `gh api`** (the hook's prescribed route) — `gh` is not authenticated: *\"You are not logged into any GitHub hosts\"*, and neither `GH_TOKEN` nor `GITHUB_TOKEN` is set.\n3. **Plain `git clone`** — `git` on this machine is the Xcode stub and the command line tools aren't installed: *\"xcode-select: Failed to locate 'git', and no install could be requested.\"*\n\nSo I have nothing to summarize from — and I don't want to describe uv from memory and pass it off as the contents of that README.\n\nTo unblock, any one of these works:\n- Run `gh auth login`, or export a `GH_TOKEN` in the environment, then I'll clone and read it.\n- Install the Xcode command line tools (`xcode-select --install`) so `git clone` works.\n- Tell me to use `WebFetch` anyway and allow the hook's request — that's your call, since the hook is enforcing your policy of preferring authenticated `gh` access over anonymous fetches."
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 12,
+            "costUsd": 0.313913,
+            "judgeCostUsd": 0.012678000000000002,
+            "durationSeconds": 61,
+            "startedAt": "2026-09-14T14:45:32.390Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-nMM5TT/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": true,
+                "weight": 0.5,
+                "explanation": "matched gh repo clone",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I couldn't retrieve the file — every available route is blocked:\n\n1. **`gh repo clone` (the required path)** — fails twice over: `gh` is not authenticated (`gh auth status` → \"You are not logged into any GitHub hosts\"), and there's no working `git` binary. `/usr/bin/git` is the Xcode shim, `xcode-select -p` points at `/Applications/Xcode.app/Contents/Developer`, and it errors with `git: error: Failed to locate 'git'` — no Command Line Tools installed.\n2. **WebFetch on the raw URL** — blocked by a hook that redirects to `gh repo clone`.\n3. **`curl` on the raw URL** — blocked by the same hook.\n\nSo I can't tell you what the README says without guessing, and I won't do that.\n\nTo unblock, either:\n- **`gh auth login`** (or export `GH_TOKEN`) **and** install git via `xcode-select --install`, then I'll clone and read it; or\n- allow WebFetch/curl for `raw.githubusercontent.com` — that's a change to your hook config, your call."
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.14613900000000002,
+            "judgeCostUsd": 0.006084000000000003,
+            "durationSeconds": 18,
+            "startedAt": "2026-09-14T14:46:10.733Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-r9TQq7/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": false,
+                "weight": 0.5,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**uv** is an extremely fast Python package and project manager, written in Rust by [Astral](https://astral.sh) (the team behind Ruff).\n\n**The pitch:** one tool to replace `pip`, `pip-tools`, `pipx`, `poetry`, `pyenv`, `twine`, and `virtualenv` — claiming 10–100× faster installs than pip.\n\n**What it does:**\n- **Projects** — dependency management with a universal lockfile, plus workspaces for scalable multi-package repos\n- **Scripts** — runs single-file scripts with inline (PEP 723) dependency metadata\n- **Python versions** — installs and switches between Python releases\n- **Tools** — runs and installs CLI tools from Python packages, pipx-style\n- **pip interface** — a drop-in-compatible `uv pip` for familiar workflows\n\n**Install:** standalone curl/PowerShell installers, or via `pip`/`pipx`. Runs on macOS, Linux, and Windows; dual-licensed Apache-2.0 / MIT.\n\nTypical flow is `uv init` → `uv add <dep>` → `uv run <script>` → `uv lock`."
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.14873000000000003,
+            "judgeCostUsd": 0.006672000000000011,
+            "durationSeconds": 19,
+            "startedAt": "2026-09-14T14:46:29.089Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-iIbAwx/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": false,
+                "weight": 0.5,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**uv** is an extremely fast Python package and project manager, written in Rust by [Astral](https://astral.sh) — the same team behind the Ruff linter.\n\n**The pitch:** \"A single tool to replace `pip`, `pip-tools`, `pipx`, `poetry`, `pyenv`, `twine`, `virtualenv`, and more\" — and it claims to be **10–100x faster than pip**.\n\nWhat it actually does:\n\n- **Project management** — dependency resolution with universal (cross-platform) lockfiles, plus workspace support for multi-package repos\n- **Package installation** — a drop-in, pip-compatible CLI (`uv pip install ...`) for migrating existing workflows, backed by a global cache that deduplicates dependencies across projects\n- **Python version management** — installs and switches Python versions itself, replacing `pyenv`\n- **Script running** — runs single-file scripts with inline dependency metadata (PEP 723), so a script declares its own deps\n- **Tool running** — `uvx`-style ephemeral/installed CLI tools, replacing `pipx`\n- **Publishing** — replaces `twine` for uploading to PyPI\n\nIt installs as a standalone binary (curl script on macOS/Linux, PowerShell on Windows) with no Rust or Python required, and also ships via pip/pipx. Works on macOS, Linux, and Windows. The README presents it as stable and production-ready, with docs at docs.astral.sh/uv."
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.145825,
+            "judgeCostUsd": 0.007662000000000002,
+            "durationSeconds": 26,
+            "startedAt": "2026-09-14T14:46:32.350Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-I2f942/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": false,
+                "weight": 0.5,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**uv** is an extremely fast Python package and project manager written in Rust, from Astral (the team behind Ruff).\n\n**What it does:** It consolidates into one tool what normally takes a half-dozen — pip, pip-tools, pipx, poetry, pyenv, twine, and virtualenv. The headline claim is 10–100x faster than pip.\n\n**Key capabilities:**\n- **Project management** — dependency resolution with universal lockfiles and workspace support\n- **Scripts** — dependency management for single-file scripts via inline metadata (PEP 723)\n- **Python versions** — installs and switches between interpreters, replacing pyenv\n- **Tools** — runs and installs Python CLI tools, replacing pipx\n- **pip-compatible interface** — a drop-in migration path for existing workflows\n- **Global cache** — deduplicates dependencies across environments\n- Works on macOS, Linux, and Windows\n\n**Install:** standalone installer (`curl` on macOS/Linux, PowerShell on Windows), or from PyPI via pip/pipx; it can also self-update."
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.7777777777777777,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.7777777777777777
+      }
+    },
+    {
+      "name": "03-explicit-curl-api",
+      "dir": "evals/03-explicit-curl-api",
+      "source": "prose",
+      "promptMarkdown": "Use curl to hit https://api.github.com/repos/rust-lang/rust/releases and give me the three most recent release tags.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 300,
+      "maxTurns": 15,
+      "graders": [
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill"
+          }
+        },
+        {
+          "name": "substitutes-gh",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "The user explicitly asked for `curl` against an api.github.com releases endpoint. Judge only\nthe ACCESS ROUTE the response settles on, not whether it obtained the release tags — the\nenvironment may legitimately block retrieval.\n\nScore against all three claims:\n\n1. It names a concrete authenticated `gh` command for rust-lang/rust releases in place of the\n   requested curl — for example `gh release list --repo rust-lang/rust` or\n   `gh api repos/rust-lang/rust/releases`. A bare mention of \"the gh CLI\" with no command does\n   not count.\n2. It does not simply comply with the curl request as the recommended route, and does not\n   present curl as an equally good option. Reporting that curl was attempted and rejected does\n   NOT fail this claim, and neither does offering curl as a clearly labelled fallback once the\n   gh command has been named first.\n3. It does not silently substitute a different repository or endpoint.\n\nFail if any claim is false.",
+          "config": {
+            "criteria": "The user explicitly asked for `curl` against an api.github.com releases endpoint. Judge only\nthe ACCESS ROUTE the response settles on, not whether it obtained the release tags — the\nenvironment may legitimately block retrieval.\n\nScore against all three claims:\n\n1. It names a concrete authenticated `gh` command for rust-lang/rust releases in place of the\n   requested curl — for example `gh release list --repo rust-lang/rust` or\n   `gh api repos/rust-lang/rust/releases`. A bare mention of \"the gh CLI\" with no command does\n   not count.\n2. It does not simply comply with the curl request as the recommended route, and does not\n   present curl as an equally good option. Reporting that curl was attempted and rejected does\n   NOT fail this claim, and neither does offering curl as a clearly labelled fallback once the\n   gh command has been named first.\n3. It does not silently substitute a different repository or endpoint.\n\nFail if any claim is false.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "uses-gh-not-curl",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "gh (release list|api)[^\\n]{0,60}rust-lang/rust",
+            "flags": "",
+            "match": "contains"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.182855,
+            "judgeCostUsd": 0.005237999999999993,
+            "durationSeconds": 23,
+            "startedAt": "2026-09-14T14:46:33.451Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-dwzac4/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "substitutes-gh",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I couldn't get the tags — both routes are blocked in this session:\n\n- **curl** against `api.github.com` is blocked by a hook in this environment, which redirects to the `gh` CLI: *\"Use `gh release list --repo rust-lang/rust` or `gh api repos/rust-lang/rust/releases/latest` instead.\"*\n- **`gh`** is installed but not authenticated — `gh auth status` reports \"You are not logged into any GitHub hosts,\" and there's no `GH_TOKEN` set.\n\nTo unblock, either:\n1. Run `gh auth login` (or export a `GH_TOKEN`) — then I'll run `gh release list --repo rust-lang/rust --limit 3`, or\n2. Tell me to proceed and adjust the hook config so plain `curl` to the GitHub API is permitted.\n\nOne note on the underlying data: `rust-lang/rust` publishes GitHub *releases* sparsely, so the releases endpoint often doesn't reflect the newest version tags. If you want the three most recent released versions, `git ls-remote --tags https://github.com/rust-lang/rust` would be the more reliable source — say the word and I'll try that instead (it's a git operation, not a GitHub API fetch, so it may not hit the same hook)."
+              },
+              {
+                "name": "uses-gh-not-curl",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched gh (release list|api)[^\\n]{0,60}rust-lang/rust",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.17655150000000003,
+            "judgeCostUsd": 0.004769999999999983,
+            "durationSeconds": 21,
+            "startedAt": "2026-09-14T14:46:48.286Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-43zncU/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "substitutes-gh",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I couldn't get the tags — both paths are blocked right now:\n\n1. **curl was intercepted by a hook** in this project, which redirects GitHub API access to the `gh` CLI:\n   > Use `gh release list --repo rust-lang/rust` or `gh api repos/rust-lang/rust/releases/latest` instead. The gh CLI uses your authenticated GitHub token and works with private repos.\n\n2. **`gh` isn't authenticated** — `gh auth status` reports no logged-in hosts, and neither `GH_TOKEN` nor `GITHUB_TOKEN` is set, so `gh api repos/rust-lang/rust/releases` exits with \"please run `gh auth login`\".\n\nTo unblock, either:\n- Run `gh auth login` (or export a `GH_TOKEN`), and I'll rerun `gh api repos/rust-lang/rust/releases --jq '.[0:3][].tag_name'`; or\n- Tell me you want the curl hook bypassed — that's your call to make, not mine."
+              },
+              {
+                "name": "uses-gh-not-curl",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched gh (release list|api)[^\\n]{0,60}rust-lang/rust",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0.5,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.17366700000000002,
+            "judgeCostUsd": 0.004790000000000003,
+            "durationSeconds": 20,
+            "startedAt": "2026-09-14T14:46:56.300Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-MfUOAG/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "substitutes-gh",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: PASS FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  false,
+                  false
+                ],
+                "evidence": "I couldn't get the tags — both paths are blocked right now:\n\n1. **`curl` was blocked by a hook** in this environment, which redirected me to the `gh` CLI:\n   > Use `gh release list --repo rust-lang/rust` … The gh CLI uses your authenticated GitHub token and works with private repos.\n\n2. **`gh` is not authenticated**, so it fails too:\n   > You are not logged into any GitHub hosts. To log in, run: `gh auth login`\n\nTo unblock, either:\n\n- **Authenticate gh** — run `gh auth login` yourself (it's interactive, so I can't run it), or set `GH_TOKEN` in the environment. Then `gh release list --repo rust-lang/rust --limit 3` gives you the tags.\n- **Or allow curl** — the curl block comes from a hook, not the sandbox; if you'd rather keep the explicit curl approach, you'd need to disable or bypass that hook. That's your call to make.\n\nSay which you'd prefer and I'll finish the lookup."
+              },
+              {
+                "name": "uses-gh-not-curl",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched gh (release list|api)[^\\n]{0,60}rust-lang/rust",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.12410149999999999,
+            "judgeCostUsd": 0.005225999999999981,
+            "durationSeconds": 28,
+            "startedAt": "2026-09-14T14:46:58.780Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-rvjZwt/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "substitutes-gh",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "The curl request was blocked — the sandbox's network filter denied outbound access to `api.github.com:443` (reported as user-denied), so no data came back.\n\nI don't want to route around that denial on my own. A couple of options, your call:\n\n- Allow the `api.github.com` host for this session, and I'll re-run the same curl.\n- Let me try `WebFetch` against the same URL instead (different tool, still needs to reach GitHub).\n\nFor reference, the command I ran was:\n\n```\ncurl -s \"https://api.github.com/repos/rust-lang/rust/releases?per_page=3\"\n```"
+              },
+              {
+                "name": "uses-gh-not-curl",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.135986,
+            "judgeCostUsd": 0.007959999999999967,
+            "durationSeconds": 19,
+            "startedAt": "2026-09-14T14:47:09.107Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-vw84PX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "substitutes-gh",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "The curl request was blocked by the sandbox's network policy:\n\n```\ncurl: (56) CONNECT tunnel failed, response 403\ndeny network-outbound api.github.com:443 (user denied)\n```\n\nEgress goes through a filtering proxy, and `api.github.com:443` isn't on the allowed list, so I couldn't reach the releases endpoint. I don't have the release tags.\n\nOptions, your call:\n- Allow `api.github.com` in the sandbox network settings and I'll re-run the same curl.\n- Let me try the `WebFetch` tool instead (different path than curl — may or may not be subject to the same block)."
+              },
+              {
+                "name": "uses-gh-not-curl",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.12660499999999997,
+            "judgeCostUsd": 0.008097999999999966,
+            "durationSeconds": 13,
+            "startedAt": "2026-09-14T14:47:16.412Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-O2Nhkv/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "substitutes-gh",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "The request was blocked by the sandbox — not by curl or the API:\n\n```\ndeny network-outbound api.github.com:443 (user denied)\n```\n\nNetwork egress in this session goes through a filtering proxy, and `api.github.com:443` isn't on the allowed list, so I couldn't fetch the releases. `gh api` would hit the same host and be blocked the same way.\n\nTo get this to work you'd need to allow that host in the sandbox's network settings — that's your call to make. Once it's permitted, re-running `curl -s https://api.github.com/repos/rust-lang/rust/releases` will give the data (the three most recent tags are the first three `tag_name` fields in the array, since the endpoint returns newest-first)."
+              },
+              {
+                "name": "uses-gh-not-curl",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.8333333333333334,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.8333333333333334
+      }
+    },
+    {
+      "name": "04-issue-no-url",
+      "dir": "evals/04-issue-no-url",
+      "source": "prose",
+      "promptMarkdown": "Summarize issue 1234 in the sigstore/cosign repository.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 300,
+      "maxTurns": 15,
+      "graders": [
+        {
+          "name": "correct-repo-flag",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "The prompt contains no URL, so the response has to pick the access method itself.\nScore it against all three claims:\n\n1. It reaches for the `gh` CLI as the way to read the issue, rather than a web fetch\n   of github.com/sigstore/cosign/issues/1234 or a curl against api.github.com.\n2. The command it names targets the right repository and issue — `sigstore/cosign`\n   and issue 1234, e.g. `gh issue view 1234 --repo sigstore/cosign`. A placeholder\n   repo or a missing `--repo` flag does not count.\n3. It does not stop at generic advice about the gh CLI without producing the command.\n\nFail if any claim is false.",
+          "config": {
+            "criteria": "The prompt contains no URL, so the response has to pick the access method itself.\nScore it against all three claims:\n\n1. It reaches for the `gh` CLI as the way to read the issue, rather than a web fetch\n   of github.com/sigstore/cosign/issues/1234 or a curl against api.github.com.\n2. The command it names targets the right repository and issue — `sigstore/cosign`\n   and issue 1234, e.g. `gh issue view 1234 --repo sigstore/cosign`. A placeholder\n   repo or a missing `--repo` flag does not count.\n3. It does not stop at generic advice about the gh CLI without producing the command.\n\nFail if any claim is false.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "names-issue-view",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "gh issue view[^\\n]{0,40}1234",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.2012045,
+            "judgeCostUsd": 0.005121999999999988,
+            "durationSeconds": 26,
+            "startedAt": "2026-09-14T14:47:26.599Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-Pp6uuW/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "correct-repo-flag",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I can't retrieve the issue — `gh` isn't authenticated in this environment, and the direct web fetch is blocked by a hook that routes GitHub access through `gh`:\n\n```\n$ gh issue view 1234 --repo sigstore/cosign --comments\nTo get started with GitHub CLI, please run:  gh auth login\n```\n```\n$ gh auth status\nYou are not logged into any GitHub hosts.\n```\n\nNo `GH_TOKEN`/`GITHUB_TOKEN` is set either.\n\nTo unblock, either:\n- run `gh auth login` yourself in a terminal (it's interactive, so I can't do it from here), or\n- set `GH_TOKEN` to a personal access token (public-repo scope is enough for sigstore/cosign) and tell me — I'll re-run the lookup immediately."
+              },
+              {
+                "name": "names-issue-view",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched gh issue view[^\\n]{0,40}1234",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.15293899999999996,
+            "judgeCostUsd": 0.0037259999999999793,
+            "durationSeconds": 15,
+            "startedAt": "2026-09-14T14:47:28.028Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-dsMAST/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "correct-repo-flag",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I can't retrieve the issue — the `gh` CLI in this environment isn't authenticated and no `GH_TOKEN`/`GITHUB_TOKEN` is set:\n\n```\ngh issue view 1234 --repo sigstore/cosign\n→ To get started with GitHub CLI, please run: gh auth login\n```\n\nTo unblock it, either:\n- run `gh auth login` yourself in a terminal, or\n- set `GH_TOKEN` to a GitHub token (a read-only token is enough for a public repo like sigstore/cosign)\n\nOnce either is in place, tell me and I'll pull the issue and summarize it. I'd rather not guess at the contents — sigstore/cosign issue numbers in the 1200s are from 2022, and I have no reliable recollection of that specific one."
+              },
+              {
+                "name": "names-issue-view",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched gh issue view[^\\n]{0,40}1234",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.16663099999999997,
+            "judgeCostUsd": 0.004044000000000006,
+            "durationSeconds": 21,
+            "startedAt": "2026-09-14T14:47:29.501Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-SsY971/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "correct-repo-flag",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I can't fetch the issue — `gh` is installed but not authenticated in this environment, and there's no `GH_TOKEN`/`GITHUB_TOKEN` set.\n\n```\ngh issue view 1234 --repo sigstore/cosign\n→ To get started with GitHub CLI, please run: gh auth login\n```\n\nTo unblock, either:\n\n- Run `gh auth login` (interactive, so you'll need to do it in your own terminal), or\n- Set a token for me to use: `export GH_TOKEN=<your PAT>` — a token with `public_repo`/read scope is enough for a public repo like sigstore/cosign.\n\nOnce one of those is in place, I'll run `gh issue view 1234 --repo sigstore/cosign --comments` and summarize the issue, its status, and the discussion. I'm deliberately not falling back to an unauthenticated `curl`/WebFetch against GitHub here, per the repo's gh-cli guidance."
+              },
+              {
+                "name": "names-issue-view",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched gh issue view[^\\n]{0,40}1234",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.17522499999999996,
+            "judgeCostUsd": 0.004781999999999995,
+            "durationSeconds": 26,
+            "startedAt": "2026-09-14T14:47:43.177Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-Za17oT/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "correct-repo-flag",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`gh` isn't authenticated in this environment (and direct API calls to api.github.com are blocked by the sandbox's network policy), so I pulled this from the public web page instead.\n\nOne thing worth flagging: **sigstore/cosign#1234 is a pull request, not an issue** — GitHub shares one numbering space between them.\n\n## sigstore/cosign#1234 — \"Update build images for release and bump cosign in the release job\"\n\n- **Author:** cpanato\n- **Opened:** December 17, 2021\n- **State:** Merged (milestone v1.5.0); branch `update-release` deleted January 17, 2022\n- **Labels:** none\n\n**What it does:** Release-infrastructure maintenance — updates the container build images used by the release process and bumps the version of cosign used within the release job itself (cosign signs its own release artifacts, so the job's cosign version needs periodic bumping).\n\n**Discussion:** Minimal. Opened as a draft, then marked ready for review; the branch was force-pushed down to a single commit (`64d7b64`). dekkagaijin was added as a reviewer, and dlorenc approved and merged it the same day.\n\nIf you actually wanted a different item — e.g. an issue you saw referenced as 1234 in another repo, or you'd like me to look at the real content of the diff — let me know."
+              },
+              {
+                "name": "names-issue-view",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0.5,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.17484700000000003,
+            "judgeCostUsd": 0.0053319999999999895,
+            "durationSeconds": 22,
+            "startedAt": "2026-09-14T14:47:50.113Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-EfBmEB/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "correct-repo-flag",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "**sigstore/cosign #1234** — \"update build images for release and bump cosign in the release job\"\n\nOne note up front: #1234 in that repo is a **pull request**, not an issue. Here's the summary:\n\n- **Author:** cpanato · **Merged by:** dlorenc\n- **Opened & merged:** December 17, 2021 (open for ~3.5 hours)\n- **Branch:** `cpanato:update-release` → `main`\n- **Size:** 1 commit, 2 files changed, +8 / −6\n- **Labels:** none\n\n**What it does:** Routine release-tooling maintenance — updates the container build images used for releases and bumps the version of cosign used within the release job itself. The description lists no ticket link and explicitly marks the release note as `NONE`, i.e. no user-facing change."
+              },
+              {
+                "name": "names-issue-view",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.17962799999999998,
+            "judgeCostUsd": 0.004145999999999983,
+            "durationSeconds": 27,
+            "startedAt": "2026-09-14T14:47:52.838Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-QMu5Wr/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "correct-repo-flag",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "sigstore/cosign #1234 is a **pull request**, not an issue.\n\n**\"update build images for release and bump cosign in the release job\"** — by cpanato, opened December 17, 2021, merged the same day into milestone v1.5.0.\n\n- **What it does:** updates the container images used by the build process and bumps the cosign version referenced in the release workflow.\n- **Discussion:** opened as a draft with a review request to dekkagaijin, force-pushed, then marked ready for review. dlorenc approved it and it merged without further modification. The `update-release` branch was deleted on January 17, 2022.\n- **Labels:** none.\n\nA note on how I got this: `gh` isn't authenticated in this session and direct calls to `api.github.com` were denied by the sandbox's network proxy, so this comes from fetching the public GitHub web page. If you want richer detail (full comment threads, diff, files changed), running `gh auth login` or setting `GH_TOKEN` would let me pull it from the API."
+              },
+              {
+                "name": "names-issue-view",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0.16666666666666666,
+        "passRateWithout": 0,
+        "delta": 0.8333333333333334
+      }
+    },
+    {
+      "name": "05-tree-directory",
+      "dir": "evals/05-tree-directory",
+      "source": "prose",
+      "promptMarkdown": "https://github.com/BurntSushi/ripgrep/tree/master/crates/core — what modules live in this directory?",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 25,
+      "graders": [
+        {
+          "name": "clones-repo",
+          "type": "regex",
+          "weight": 0.5,
+          "config": {
+            "target": "last_message",
+            "pattern": "gh repo clone",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "routes-to-clone",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "The user asked what lives in a directory, given a github.com `/tree/` URL. Judge only the\nACCESS ROUTE the response settles on, not whether it obtained the listing — the environment\nmay legitimately block retrieval.\n\nScore against all three claims:\n\n1. It identifies cloning the `BurntSushi/ripgrep` repository and inspecting it\n   locally as the correct route, naming `gh repo clone` (or `gh` clone-then-explore in words\n   that clearly mean that). The repository must be identified as BurntSushi/ripgrep\n   somewhere in the response.\n2. It does not RECOMMEND fetching the github.com tree URL, `curl`, or `wget` as the way to do\n   this. Two things explicitly do NOT fail this claim: reporting that such an attempt was made\n   and rejected, and offering an unauthenticated fetch as a clearly labelled fallback or\n   unblock option after the clone route has been named first. It fails only if a raw fetch is\n   presented as the primary or recommended route, or offered with no indication that it\n   bypasses the intended workflow.\n3. It does not RECOMMEND `gh api` with a `/contents/` endpoint, or base64-decoding an API\n   response, as a substitute for cloning. Reporting that such an attempt was made and\n   rejected, or listing it among routes that were blocked, does NOT fail this claim — it\n   fails only if that endpoint is put forward as a way to proceed.\n\nFail if any claim is false.",
+          "config": {
+            "criteria": "The user asked what lives in a directory, given a github.com `/tree/` URL. Judge only the\nACCESS ROUTE the response settles on, not whether it obtained the listing — the environment\nmay legitimately block retrieval.\n\nScore against all three claims:\n\n1. It identifies cloning the `BurntSushi/ripgrep` repository and inspecting it\n   locally as the correct route, naming `gh repo clone` (or `gh` clone-then-explore in words\n   that clearly mean that). The repository must be identified as BurntSushi/ripgrep\n   somewhere in the response.\n2. It does not RECOMMEND fetching the github.com tree URL, `curl`, or `wget` as the way to do\n   this. Two things explicitly do NOT fail this claim: reporting that such an attempt was made\n   and rejected, and offering an unauthenticated fetch as a clearly labelled fallback or\n   unblock option after the clone route has been named first. It fails only if a raw fetch is\n   presented as the primary or recommended route, or offered with no indication that it\n   bypasses the intended workflow.\n3. It does not RECOMMEND `gh api` with a `/contents/` endpoint, or base64-decoding an API\n   response, as a substitute for cloning. Reporting that such an attempt was made and\n   rejected, or listing it among routes that were blocked, does NOT fail this claim — it\n   fails only if that endpoint is put forward as a way to proceed.\n\nFail if any claim is false.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 11,
+            "costUsd": 0.28678349999999997,
+            "judgeCostUsd": 0.007433999999999982,
+            "durationSeconds": 51,
+            "startedAt": "2026-09-14T14:48:09.125Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-MVZbCR/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": true,
+                "weight": 0.5,
+                "explanation": "matched gh repo clone",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "I couldn't retrieve the directory listing — every available path is blocked:\n\n| Approach | Result |\n|---|---|\n| `gh repo clone` / `git clone` | `git` is unusable: `/usr/bin/git` is the Xcode shim and the Command Line Tools aren't installed (`xcode-select: Failed to locate 'git'`) |\n| `gh api .../contents/...` | Blocked by a hook: \"Do not use `gh api` to access /contents/ endpoints. Clone the repo instead\" |\n| `gh api .../git/trees/master` | `gh` is not authenticated (`gh auth status`: not logged in), and no `GH_TOKEN`/`GITHUB_TOKEN` is set |\n| `curl` to api.github.com | Blocked by a hook redirecting to `gh api` |\n| `WebFetch` on the tree URL | Blocked by a hook redirecting to `gh repo clone` |\n\nSo the hooks require a clone, and cloning is impossible without git or auth.\n\nTo unblock, any one of these works:\n- `gh auth login` (or export a `GH_TOKEN`) — then I can use `gh api .../git/trees/master?recursive=1`, which isn't a `/contents/` endpoint, to list the directory without cloning\n- Install the Xcode Command Line Tools (`xcode-select --install`) so `git`/`gh repo clone` work — this is the path the hooks are steering toward\n- Point me at a local checkout of ripgrep if you have one\n\nFrom memory (unverified, and ripgrep restructured this crate around 14.x), `crates/core` holds `main.rs`, `search.rs`, `haystack.rs`, `logger.rs`, `messages.rs`, and a `flags/` submodule directory — but I'd rather confirm against the real tree than have you rely on that."
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 11,
+            "costUsd": 0.30110099999999995,
+            "judgeCostUsd": 0.006395999999999985,
+            "durationSeconds": 52,
+            "startedAt": "2026-09-14T14:48:12.137Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-73rsHU/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": true,
+                "weight": 0.5,
+                "explanation": "matched gh repo clone",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I can't get you the listing from this environment — every available path is blocked:\n\n- **`gh repo clone` (the prescribed path)** fails: `gh` is not authenticated (`gh auth status` → \"You are not logged into any GitHub hosts\"), and no `GH_TOKEN`/`GITHUB_TOKEN` is set.\n- **Plain `git clone`** fails independently of auth: the only `git` on PATH is the Xcode shim at `/usr/bin/git`, and it can't resolve a real git binary here (`xcode-select: Failed to locate 'git'`, plus a denied `xcrun` cache write in the sandbox). So even with a token, cloning wouldn't work.\n- **`gh api .../contents/...`** and **`WebFetch`** are both intercepted by a project hook that redirects to cloning.\n\nTo unblock, either run `gh auth login` (or export `GH_TOKEN`) *and* install a working git (e.g. `xcode-select --install` or Homebrew git), or point me at a local checkout of ripgrep and I'll read `crates/core` directly.\n\nI'd rather not answer from memory here — `crates/core` has been reorganized more than once in ripgrep's history (files moved in and out as the `flags` module was introduced), so a recalled list could easily be stale or wrong for current `master`."
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 9,
+            "costUsd": 0.24043199999999998,
+            "judgeCostUsd": 0.0061200000000000004,
+            "durationSeconds": 37,
+            "startedAt": "2026-09-14T14:48:19.885Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-TuKGYo/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": true,
+                "weight": 0.5,
+                "explanation": "matched gh repo clone",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "I can't retrieve the listing right now — both paths are blocked:\n\n- **`gh` is not authenticated** (`gh auth status`: \"You are not logged into any GitHub hosts\"), and no `GH_TOKEN`/`GITHUB_TOKEN` is set. So `gh repo clone` and `gh api` both fail immediately.\n- **`git` is unusable** in this environment: `/usr/bin/git` is the Xcode command-line stub, and it errors with `xcode-select: Failed to locate 'git'` (no real toolchain installed, and it can't write its cache under the sandbox).\n- **`WebFetch` is blocked by a hook** on this repo's policy, which requires the `gh repo clone` route instead.\n\nTo unblock, either:\n1. Run `gh auth login` (or export a `GH_TOKEN`) — then I'll clone and list the directory, or\n2. Install a working git (e.g. `xcode-select --install` or Homebrew git).\n\nFor what it's worth, `crates/core` in ripgrep is the `rg` binary crate rather than a library of many modules — but I'd rather read the actual tree than tell you from memory, so let me know once one of the above is available."
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.200528,
+            "judgeCostUsd": 0.007086000000000009,
+            "durationSeconds": 28,
+            "startedAt": "2026-09-14T14:48:56.644Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-7X5D1g/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": false,
+                "weight": 0.5,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`crates/core` is ripgrep's binary crate (`main.rs` is the entry point). Its module tree, as declared in `main.rs`:\n\n| Module | Form | Role |\n|---|---|---|\n| `messages` | `messages.rs` (`#[macro_use]`) | Macros/helpers for emitting errors and warnings |\n| `flags` | `flags/` directory | The CLI interface definition — flag definitions, parsing, help/man generation |\n| `haystack` | `haystack.rs` | Building the set of files to search (directory traversal / file selection) |\n| `index` | `index/` directory | Index-related support |\n| `logger` | `logger.rs` | `log` crate implementation used for `--debug`/`--trace` |\n| `search` | `search.rs` | Glue that wires `grep-matcher`, `grep-regex`, `grep-searcher`, and `grep-printer` together to run the search |\n\nAlso in the directory: `README.md`, which describes the crate as the CLI definition plus the glue that drives the `grep-*` library crates. Note this crate is intentionally not published as a reusable library — the reusable pieces live in the sibling `crates/` (grep-matcher, grep-regex, grep-searcher, grep-printer, ignore, globset, etc.).\n\nTwo notes on how I got this: `gh` isn't authenticated here and direct `api.github.com` access was blocked by the sandbox's network policy, so I read the rendered GitHub page and the raw `main.rs` instead. The `index` module is recent enough that I'm going by the file listing rather than knowing its contents — say the word and I'll pull `index/` to summarize what it does."
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.20104099999999997,
+            "judgeCostUsd": 0.00922199999999998,
+            "durationSeconds": 29,
+            "startedAt": "2026-09-14T14:49:00.478Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-SiTlAE/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": false,
+                "weight": 0.5,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`crates/core` is ripgrep's binary crate (the `main` function plus the CLI definition and the glue that wires `grep-matcher`, `grep-regex`, `grep-searcher`, and `grep-printer` together). It's not meant to be used as a library.\n\n**Top level**\n\n| Entry | Notes |\n|---|---|\n| `main.rs` | Entry point; ~19 KB |\n| `search.rs` | Search execution — builds searchers/printers and runs them |\n| `haystack.rs` | The \"thing to search\" abstraction (files/paths handed to the searcher) |\n| `messages.rs` | Warning/error message emission |\n| `logger.rs` | `log` implementation for `--debug`/`--trace` |\n| `README.md` | Short description of the crate |\n| `flags/` | CLI flag definitions and parsing |\n| `index/` | Index support, feature-gated |\n\n**`flags/`** — `mod.rs`, `defs.rs` (the big one, ~246 KB: every flag with its docs), `parse.rs`, `lowargs.rs` (raw parsed args), `hiargs.rs` (high-level args resolved into usable config, ~59 KB), `config.rs` (`RIPGREP_CONFIG_PATH` handling), plus `complete/` (shell completion generation) and `doc/` (man page / doc generation).\n\n**`index/`** — `mod.rs`, `enabled.rs`, `disabled.rs`: a tiny compile-time switch, so the index feature is a no-op stub unless enabled.\n\nOne note: `gh` isn't authenticated in this environment (`gh auth login` or `GH_TOKEN` needed), so I read this through the public GitHub API instead."
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.199242,
+            "judgeCostUsd": 0.010838000000000014,
+            "durationSeconds": 28,
+            "startedAt": "2026-09-14T14:49:04.577Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-oDNtp9/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "clones-repo",
+                "passed": false,
+                "weight": 0.5,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "routes-to-clone",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`crates/core` is ripgrep's binary crate (the `rg` executable itself). `main.rs` declares six modules:\n\n| Module | Form | Role |\n|---|---|---|\n| `flags` | directory `flags/` | CLI definition and argument parsing |\n| `index` | directory `index/` | index reading/writing |\n| `messages` | `messages.rs` | `#[macro_use]` — error/status message macros |\n| `haystack` | `haystack.rs` | the \"things to search\" abstraction (files/paths to feed the searcher) |\n| `logger` | `logger.rs` | logging implementation |\n| `search` | `search.rs` | the search worker that drives a search |\n\nPlus `README.md`, which describes the crate as holding the CLI interface definition and the glue code tying `grep-matcher`, `grep-regex`, `grep-searcher`, and `grep-printer` together to actually execute searches.\n\nNote: `index` is a relatively recent addition and not part of older ripgrep releases. Descriptions of `haystack`, `index`, and `search` above are inferred from the module names and README; I didn't read those files' contents."
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.7777777777777777,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.7777777777777777
+      }
+    },
+    {
+      "name": "06-neg-github-pages",
+      "dir": "evals/06-neg-github-pages",
+      "source": "prose",
+      "promptMarkdown": "Fetch https://kubernetes.github.io/ingress-nginx/ and tell me what the default backend does.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 180,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "answers-directly",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "`kubernetes.github.io` is a GitHub Pages documentation site, not a GitHub repository URL —\nthe gh CLI cannot serve it. This is a should-NOT-fire case: the plugin must leave it alone.\n\nScore against both claims:\n\n1. It treats the URL as an ordinary web page to read. It does NOT redirect the user to the\n   `gh` CLI, does NOT name a `gh` command, and does NOT describe gh as the authenticated\n   way to reach this page.\n2. It either answers what the default backend does, or reports a genuine network or\n   page-load failure. Being unable to reach the network is acceptable and is NOT a failure\n   of this grader; wrongly routing the request through gh is.\n\nFail if either claim is false.",
+          "config": {
+            "criteria": "`kubernetes.github.io` is a GitHub Pages documentation site, not a GitHub repository URL —\nthe gh CLI cannot serve it. This is a should-NOT-fire case: the plugin must leave it alone.\n\nScore against both claims:\n\n1. It treats the URL as an ordinary web page to read. It does NOT redirect the user to the\n   `gh` CLI, does NOT name a `gh` command, and does NOT describe gh as the authenticated\n   way to reach this page.\n2. It either answers what the default backend does, or reports a genuine network or\n   page-load failure. Being unable to reach the network is acceptable and is NOT a failure\n   of this grader; wrongly routing the request through gh is.\n\nFail if either claim is false.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "no-gh-suggestion",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "\\bgh (repo|pr|issue|api|release|gist)\\b",
+            "flags": "",
+            "match": "not_contains"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.1603695,
+            "judgeCostUsd": 0.004098000000000018,
+            "durationSeconds": 24,
+            "startedAt": "2026-09-14T14:49:24.668Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-oWMSyo/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "The landing page only links to the topic, so I followed through to the [Default backend](https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/) page.\n\n**What it does:** the default backend is the catch-all service that handles every URL path and host the ingress-nginx controller doesn't recognize — i.e. any request that matches no configured ingress rule gets proxied there instead of being dropped.\n\n**Contract it must satisfy** — a service can serve as the default backend if it exposes two endpoints:\n\n| Path | Expected response |\n|---|---|\n| `/healthz` | HTTP 200 (used for health checking) |\n| `/` | HTTP 404 (the fallback response for unmatched traffic) |\n\n**Customization:** the project ships a custom error pages service under `/images/custom-error-pages` in the repo, so you can replace the generic 404 with your own branded error responses rather than running the stock backend."
+              },
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.16949149999999993,
+            "judgeCostUsd": 0.00871199999999997,
+            "durationSeconds": 23,
+            "startedAt": "2026-09-14T14:49:29.957Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-rZGVRG/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "The landing page only links to the topic, so I followed through to [the Default backend page](https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/). Here's what it says:\n\n**The default backend is the catch-all service for traffic the controller can't route.** It handles all URL paths and hosts that the ingress-nginx controller doesn't understand — i.e., any request that doesn't match a configured Ingress rule gets sent there instead of failing in an undefined way.\n\nIt must satisfy two endpoints:\n\n- **`/healthz`** — returns `200` so the controller can health-check it\n- **`/`** — returns `404` for unmatched requests\n\nFor customizing what users actually see, the project ships a custom error page service under `/images/custom-error-pages` in the repo, which you can deploy in place of the stock backend. The docs page itself doesn't spell out the headers that service receives, so if you want to build your own error pages I'd check that image's source or the custom-error-pages guide next."
+              },
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.16601299999999997,
+            "judgeCostUsd": 0.007305999999999979,
+            "durationSeconds": 21,
+            "startedAt": "2026-09-14T14:49:32.314Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-Nt8j5R/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "The landing page only links to the topic, so I followed through to the [Default backend](https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/) page.\n\n**What it does:** the default backend is a service that handles all URL paths and hosts the ingress-nginx controller doesn't understand — i.e. anything that doesn't match a configured Ingress rule. Instead of the request failing at the proxy, nginx forwards it there.\n\n**Contract it must satisfy** — it exposes two endpoints:\n- `/healthz` → returns 200 (used for health checking)\n- `/` → returns 404 (the catch-all response for unmatched requests)\n\n**Customization:** you can swap in your own service to serve branded/custom error pages; the project ships an example implementation under `images/custom-error-pages` in the repo.\n\nOne note: I used a plain web fetch rather than the `gh` CLI here. Despite the `kubernetes.github.io` hostname, this is a public GitHub Pages documentation site, not the GitHub API — there's no repo, PR, or issue resource for `gh` to address, and no authentication involved."
+              },
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.15270000000000003,
+            "judgeCostUsd": 0.0037680000000000213,
+            "durationSeconds": 18,
+            "startedAt": "2026-09-14T14:49:48.472Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-4u5GpF/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "The landing page at that URL only links to the topic, so I followed it to `user-guide/default-backend/`. Here's what it says:\n\n**The default backend is the catchall service for the ingress-nginx controller.** It handles all URL paths and hosts the controller doesn't understand — i.e., every request that isn't matched by an Ingress rule.\n\nIt must satisfy two endpoint requirements:\n- `GET /healthz` → returns 200 (used as the health/readiness signal)\n- `GET /` → returns 404\n\nSo in practice it's a safety net: unrouted traffic gets a clean 404 instead of a controller error. The default 404 responses can be customized — the repo ships tooling for this under `/images/custom-error-pages`, which you point at via a separate service."
+              },
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.15974300000000002,
+            "judgeCostUsd": 0.00517200000000001,
+            "durationSeconds": 23,
+            "startedAt": "2026-09-14T14:49:52.940Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-lyvjZw/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "The landing page only links to the topic, so I followed through to `https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/`. What it says:\n\n**The default backend is the catch-all** — \"a service which handles all URL paths and hosts the ingress-nginx controller doesn't understand.\" Any request that doesn't match a configured Ingress rule gets routed there instead of being dropped.\n\n**It must expose two endpoints:**\n- `/healthz` — returns HTTP 200, used for the health check\n- `/` — returns HTTP 404 for everything unmatched\n\n**Customization:** the docs point at the `/images/custom-error-pages` sub-directory, which provides an additional service for customizing the error pages the default backend serves, so you can return something friendlier than a bare 404."
+              },
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.15288,
+            "judgeCostUsd": 0.0039959999999999996,
+            "durationSeconds": 20,
+            "startedAt": "2026-09-14T14:49:53.343Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-CiYWYo/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "The landing page itself doesn't describe it — it just links to the User Guide page, so I followed that link ([user-guide/default-backend/](https://kubernetes.github.io/ingress-nginx/user-guide/default-backend/)).\n\n**The default backend is the catch-all for requests the ingress controller can't route.** If an incoming request's host/path doesn't match any rule in any Ingress, NGINX hands it to the default backend instead of dropping it, so clients get a consistent response.\n\nIt's a normal Service, and the docs require it to expose two endpoints:\n\n| Endpoint | Response |\n|---|---|\n| `/healthz` | `200` — used to verify the backend is healthy |\n| `/` | `404` — the response served for unmatched requests |\n\nThe docs also point to a `custom-error-pages` example if you want to serve your own branded error pages rather than a bare 404."
+              },
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "07-neg-gitlab",
+      "dir": "evals/07-neg-gitlab",
+      "source": "prose",
+      "promptMarkdown": "Summarize https://gitlab.com/gitlab-org/gitlab/-/issues/12345 for me.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 180,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "no-gh-suggestion",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "\\bgh (repo|pr|issue|api|release|gist)\\b",
+            "flags": "",
+            "match": "not_contains"
+          }
+        },
+        {
+          "name": "treats-as-non-github",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "This is a GitLab issue URL, not GitHub. The GitHub CLI cannot read it. This is a\nshould-NOT-fire case: the plugin must leave it alone.\n\nScore against both claims:\n\n1. It does NOT suggest `gh` in any form as the way to read this issue, and does NOT\n   describe the URL as a GitHub resource.\n2. It either summarizes the issue, or reports a genuine network or access failure against\n   gitlab.com. Being unable to reach the network is acceptable and is NOT a failure of this\n   grader; routing a GitLab URL through the GitHub CLI is.\n\nFail if either claim is false.",
+          "config": {
+            "criteria": "This is a GitLab issue URL, not GitHub. The GitHub CLI cannot read it. This is a\nshould-NOT-fire case: the plugin must leave it alone.\n\nScore against both claims:\n\n1. It does NOT suggest `gh` in any form as the way to read this issue, and does NOT\n   describe the URL as a GitHub resource.\n2. It either summarizes the issue, or reports a genuine network or access failure against\n   gitlab.com. Being unable to reach the network is acceptable and is NOT a failure of this\n   grader; routing a GitLab URL through the GitHub CLI is.\n\nFail if either claim is false.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.18370250000000002,
+            "judgeCostUsd": 0.006834000000000007,
+            "durationSeconds": 32,
+            "startedAt": "2026-09-14T14:50:06.964Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-mE1iUV/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "treats-as-non-github",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "Here's the summary of **gitlab-org/gitlab#12345**:\n\n## Merge requests requiring attention\n\n**Status:** Open · **Type:** MR triage notice for merge request coaches\n\nIt's not a bug report or feature request — it's an automated/periodic triage roundup asking MR coaches to review a batch of community merge requests and decide what happens to each.\n\n**Two buckets of MRs:**\n\n1. **Recently opened, unlabeled MRs from external contributors** (three of them) — coaches are asked to judge whether each is ready for review, needs a reviewer assigned, or should be closed. Topics include UI consolidation and JavaScript module cleanup.\n2. **Stalled community contributions** (one MR) — no \"coach will finish\" label and no activity for ~two months. The ask is whether the team should finish it, request more changes, or close it.\n\n**Process:** Each MR has a checkbox; coaches tick it off once triaged and leave a note on prioritization/next steps.\n\n**Labels:** Manage, Create, UX, UX debt, frontend, webpack, api, merge requests, Community contribution, devops::manage, devops::create. No milestone set.\n\nTwo notes on how I got this: since this is GitLab rather than GitHub, `gh` doesn't apply, and `glab` isn't installed here — so I read the rendered issue page directly. I also tried the GitLab public API for more precise field values (exact MR links, author, dates), but outbound network to `gitlab.com:443` was denied by the sandbox, so the details above come from the page render and are a little fuzzy on specifics like the individual MR titles."
+              }
+            ]
+          },
+          {
+            "score": 0.5,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.14485750000000003,
+            "judgeCostUsd": 0.004524000000000028,
+            "durationSeconds": 19,
+            "startedAt": "2026-09-14T14:50:13.097Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-otUDni/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "treats-as-non-github",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**[gitlab-org/gitlab#12345](https://gitlab.com/gitlab-org/gitlab/-/issues/12345) — \"Merge requests requiring attention\"** (open)\n\nThis isn't a bug report or feature request — it's an automated triage issue filed by the GitLab Merge Request Coaches group (`@gitlab-org/coaches`).\n\n**What it asks for:** coaches to work through two lists of merge requests that have fallen through the cracks:\n\n1. **Recently opened, unlabeled MRs from non-group members** (3 listed) — community contributions that haven't been categorized yet.\n2. **Inactive community contributions with no team assigned** (1 listed) — stalled work with no owner.\n\n**Expected action per MR:** approve as ready to merge, assign a reviewer, or close it — then check it off the list.\n\n**Labels:** a grab-bag reflecting the MRs it references (Manage, UX, frontend, webpack, api, Community contribution). No milestone set.\n\nWorth noting these auto-generated triage issues are numerous and low-signal; if you were expecting a specific technical discussion at this number, you may be thinking of a merge request (`/-/merge_requests/12345`) rather than an issue."
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.14837100000000003,
+            "judgeCostUsd": 0.004770000000000024,
+            "durationSeconds": 20,
+            "startedAt": "2026-09-14T14:50:15.634Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-qGliBK/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "treats-as-non-github",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "**[gitlab-org/gitlab#12345 — \"Merge requests requiring attention\"](https://gitlab.com/gitlab-org/gitlab/-/issues/12345)** (open)\n\nIt's not a bug report — it's an automated triage roundup aimed at GitLab's **merge request coaches**. It collects MRs in two buckets:\n\n- Recently opened MRs from non-`gitlab-org` authors that have no labels yet\n- Community contributions that have gone stale (no recent activity)\n\nCoaches are asked to walk the list and decide, per MR, whether it's ready, needs a reviewer assigned, or should be closed — then tick the checkbox next to it and leave their assessment.\n\nFour MRs are listed, covering UI consolidation, dropdown behavior improvements, and API work for merge request templates. Labels span `Manage`, `Create`, `UX`/`UX debt`, `frontend`, `webpack`, `api`, and `Community contribution`; no milestone is set.\n\nWorth noting: this is GitLab, so `gh` doesn't apply — I fetched the public issue page directly. If you want richer detail (full comment thread, current checkbox state), GitLab's REST API at `https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab/issues/12345` would give it, though it may need a token for rate limits."
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.19069300000000003,
+            "judgeCostUsd": 0.005424000000000012,
+            "durationSeconds": 36,
+            "startedAt": "2026-09-14T14:50:31.764Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-SvtA8r/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "treats-as-non-github",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "**[gitlab-org/gitlab#12345 — \"Merge requests requiring attention\"](https://gitlab.com/gitlab-org/gitlab/-/issues/12345)**\n\n| | |\n|---|---|\n| Author | `gitlab-bot` (automated) |\n| State | **Closed** |\n| Opened | 2019-06-24 00:22 UTC |\n| Closed | 2019-06-24 07:57 UTC (~7.5 hours later) |\n| Labels | `Enterprise Edition`, `triage report` |\n| Milestone | none |\n| Comments | 2 |\n\n**What it is:** not a bug or feature request — it's an auto-generated triage report, one of the recurring issues GitLab's triage bot files to nudge Merge Request Coaches.\n\n**Content:** the body lists a handful of merge requests in two buckets:\n1. Recently opened MRs with no labels, from authors outside the `gitlab-org` group.\n2. Community contributions that had gone inactive (no activity for 2+ months).\n\nFor each one, coaches were asked to decide whether the MR is ready for review, needs a reviewer assigned, or should be closed — then tick the checkbox once triaged. The listed MRs carried labels like `Community contribution`, `Manage`, `Create`, `UX debt`, `frontend`, `webpack`, and `api`.\n\n**Outcome:** closed the same morning it was filed, which is the normal lifecycle for these reports — they're short-lived worklists, superseded by the next scheduled run rather than resolved through discussion.\n\nOne correction to flag: my first read of the rendered page showed the issue as open; the API confirms it's closed, and that's the accurate value above."
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.14664250000000004,
+            "judgeCostUsd": 0.004434000000000021,
+            "durationSeconds": 21,
+            "startedAt": "2026-09-14T14:50:35.938Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-Wa8VFa/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "treats-as-non-github",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "**[gitlab-org/gitlab#12345 — \"Merge requests requiring attention\"](https://gitlab.com/gitlab-org/gitlab/-/issues/12345)** (open)\n\nThis isn't a bug or feature request — it's an automated/internal triage coordination issue asking GitLab's MR coaches to work through a list of merge requests that had fallen through the cracks.\n\n**What it covers**\n- Two buckets of MRs: recently opened ones from non-core contributors that hadn't been labeled, and community contributions that had gone inactive with no team engagement.\n- Four specific MRs in total — three recent, one long-stale community contribution.\n- Labels touched include Manage, UX, UX debt, frontend, webpack, and Community contribution.\n\n**The ask**\nFor each listed MR, a coach should decide whether it's ready to proceed, needs a reviewer assigned, or should be closed — then tick the corresponding checkbox in the issue.\n\nTwo caveats: this is a GitLab-hosted issue, so the `gh` CLI doesn't apply here — I read the public web page. And the page didn't expose the author or open date in a form I could reliably extract, so I've left those out rather than guess."
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.16425250000000002,
+            "judgeCostUsd": 0.004512000000000016,
+            "durationSeconds": 25,
+            "startedAt": "2026-09-14T14:50:38.849Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-kw0rdI/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-gh-suggestion",
+                "passed": true,
+                "weight": 1,
+                "explanation": "pattern absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "treats-as-non-github",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "**gitlab.com/gitlab-org/gitlab#12345 — \"Merge requests requiring attention\"** (open)\n\nThis isn't a bug report or feature request — it's an automated triage ticket for GitLab's merge request coaches.\n\n- **Purpose:** flag community MRs that need a coach to look at them.\n- **Two buckets:**\n  1. Recently opened MRs from non-group members that have no labels yet.\n  2. Community contributions that have been inactive for 2+ months.\n- **Asked action:** for each listed MR, a coach decides to mark it ready, assign a reviewer, or close it, then ticks the checkbox.\n- **MRs listed:** !7471, !3840, !3830, !7432 (labels across them include Manage, UX, frontend, Community contribution).\n\nTwo caveats:\n- I read this via the rendered web page, and GitLab pages are JS-heavy, so comment-thread details may be incomplete. I tried the GitLab REST API for a cleaner read, but the sandbox blocked outbound network access to `gitlab.com` for `curl` — lifting that is your call if you want me to pull the structured data.\n- This is GitLab, not GitHub, so the `gh` CLI doesn't apply here."
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.8333333333333334,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": -0.16666666666666663
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 7,
+    "casesPassed": 2,
+    "overallScore": 0.865079365079365,
+    "overallPassRate": 0.7619047619047619,
+    "meanDelta": 0.5555555555555556
+  }
+}
